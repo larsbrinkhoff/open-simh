@@ -259,6 +259,7 @@
     <ClCompile Include="..\imlac\imlac_pt.c" />
     <ClCompile Include="..\imlac\imlac_sys.c" />
     <ClCompile Include="..\imlac\imlac_tty.c" />
+    <ClCompile Include="..\imlac\imlac_mse.c" />
     <ClCompile Include="..\scp.c" />
     <ClCompile Include="..\sim_console.c" />
     <ClCompile Include="..\sim_disk.c" />

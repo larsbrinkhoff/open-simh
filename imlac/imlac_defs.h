@@ -75,6 +75,6 @@ extern uint16 memmask;
 extern SUBDEV *dev_tab[0100];
 extern DEVICE cpu_dev, irq_dev, rom_dev, dp_dev, crt_dev, kbd_dev;
 extern DEVICE tty_dev, ptr_dev, ptp_dev, sync_dev;
-extern DEVICE bel_dev;
+extern DEVICE bel_dev, mse_dev;
 
 #endif /* IMLAC_DEFS_H_ */

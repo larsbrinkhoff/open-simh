@@ -230,6 +230,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\imlac\imlac_mse.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\windows-build\pthreads\pthread.c"
 				>
 				<FileConfiguration
