@@ -69,6 +69,12 @@ extern void rom_tty (void);
 extern void rom_stty (void);
 extern void rom_ptr (void);
 
+extern void xy_init (void);
+extern void xy_point (int x, int y);
+extern void xy_line (int x1, int y1, int x2, int y2);
+extern void xy_idle (void);
+extern void xy_clear (void);
+
 extern REG cpu_reg[];
 extern uint16 M[];
 extern uint16 memmask;

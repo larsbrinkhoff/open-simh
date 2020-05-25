@@ -30,15 +30,24 @@
 
 /* Function declaration. */
 static t_stat crt_svc (UNIT *uptr);
+static t_stat crt_set_type (UNIT *uptr, int32 val, CONST char *cptr, void *desc);
+static t_stat crt_show_type (FILE *st, UNIT *up, int32 v, CONST void *dp);
 static t_stat crt_reset (DEVICE *dptr);
 
 static int crt_quit = FALSE;
+static int XY = 0;
 
 /* Debug */
 #define DBG             0001
 
 static UNIT crt_unit = {
   UDATA (&crt_svc, UNIT_IDLE, 0)
+};
+
+static MTAB crt_mod[] = {
+  { MTAB_VDV|MTAB_VALR, 1, "TYPE", "TYPE", &crt_set_type,
+    &crt_show_type, NULL, "Set CRT output" },
+  { 0 }
 };
 
 static DEBTAB crt_deb[] = {
@@ -54,7 +63,7 @@ static DEBTAB crt_deb[] = {
 #endif
 
 DEVICE crt_dev = {
-  "CRT", &crt_unit, NULL, NULL,
+  "CRT", &crt_unit, NULL, crt_mod,
   1, 8, 16, 1, 8, 16,
   NULL, NULL, &crt_reset,
   NULL, NULL, NULL,
@@ -76,6 +85,28 @@ crt_svc(UNIT *uptr)
   return SCPE_OK;
 }
 
+static t_stat crt_set_type (UNIT *uptr, int32 val, CONST char *cptr, void *desc)
+{
+  t_stat r = SCPE_OK;
+  if (strcmp (cptr, "DISPLAY") == 0)
+    XY = 0;
+  else if (strcmp (cptr, "XY") == 0)
+    XY = 1;
+  else
+    r = SCPE_ARG;
+  return r;
+}
+
+static t_stat crt_show_type (FILE *st, UNIT *up, int32 v, CONST void *dp)
+{
+  if (XY) {
+    fprintf (st, "TYPE=XY");
+  } else {
+    fprintf (st, "TYPE=DISPLAY");
+  }
+  return SCPE_OK;
+}
+
 static void crt_quit_callback (void)
 {
   crt_quit = TRUE;
@@ -84,6 +115,13 @@ static void crt_quit_callback (void)
 static t_stat
 crt_reset (DEVICE *dptr)
 {
+  if (XY) {
+    if (dptr->flags & DEV_DIS) {
+      ;
+    } else {
+      xy_init ();
+    }
+  }
 #ifdef USE_DISPLAY
   if (dptr->flags & DEV_DIS || (sim_switches & SWMASK('P')) != 0) {
     display_close (dptr);
@@ -102,6 +140,10 @@ void
 crt_point (uint16 x, uint16 y)
 {
   sim_debug (DBG, &crt_dev, "Point %d,%d\n", x, y);
+  if (crt_dev.flags & DEV_DIS)
+    return;
+  if (XY)
+    xy_point (x << 5, y << 5);
 #ifdef USE_DISPLAY
   if (crt_dev.flags & DEV_DIS)
     return;
@@ -113,6 +155,10 @@ void
 crt_line (uint16 x1, uint16 y1, uint16 x2, uint16 y2)
 {
   sim_debug (DBG, &crt_dev, "Line %d,%d - %d,%d\n", x1, y1, x2, y2);
+  if (crt_dev.flags & DEV_DIS)
+    return;
+  if (XY)
+    xy_line (x1 << 5, y1 << 5, x2 << 5, y2 << 5);
 #ifdef USE_DISPLAY
   if (crt_dev.flags & DEV_DIS)
     return;
@@ -126,10 +172,14 @@ crt_line (uint16 x1, uint16 y1, uint16 x2, uint16 y2)
 void
 crt_idle (void)
 {
+  if (XY)
+    xy_idle ();
 }
 
 /* Display high voltage sync. */
 void
 crt_hvc (void)
 {
+  if (XY)
+    xy_clear ();
 }
