@@ -88,7 +88,7 @@ void xy_xyz (int x, int y, int z)
   if (x < 0 || x > 65535 || y < 0 || x > 65535)
     return;
 
-  while (SDL_GetQueuedAudioSize (dev) > 10*CHANNELS*2*44100)
+  while (SDL_GetQueuedAudioSize (dev) > CHANNELS*2*44100)
     SDL_Delay (10);
 
   memset (data, 0, sizeof data);
@@ -144,10 +144,12 @@ void xy_point (int x, int y)
   beam = 1;
 }
 
+static int spacing = 3000/3;
+
 void xy_line(int x1, int y1, int x2, int y2)
 {
   double x, y, dx, dy, r;
-  int i, n = 3000;
+  int i, n = spacing;
   dx = x2 - x1;
   dy = y2 - y1;
   r = sqrt (dx * dx + dy * dy);
@@ -159,8 +161,6 @@ void xy_line(int x1, int y1, int x2, int y2)
   if (r <= n) {
     xy_to (x1, y1);
     xy_to (x2, y2);
-    x = x2;
-    y = y2;
   } else {
     for (i = 0; i <= (int)(r + .499); i += n) {
       x = x1 + i * dx + .499;
@@ -169,28 +169,38 @@ void xy_line(int x1, int y1, int x2, int y2)
     }
 
     if (i - (int)(r + .499) > n / 4) {
-      x = x2 + .499;
-      y = y2 + .499;
-      xy_to ((int)x, (int)y);
+      xy_to (x2, y2);
     }
   }
 
-  px = (int)x;
-  py = (int)y;
+  px = x2;
+  py = y2;
   beam = 1;
 }
 
 static void
 xy_frame (void)
 {
-  xy_xyz (0, 0, 0);
-  xy_xyz (0, 0, 0);
-  xy_xyz (0, 65535, 0);
-  xy_xyz (0, 65535, 0);
-  xy_xyz (65535, 65535, 0);
-  xy_xyz (65535, 65535, 0);
-  xy_xyz (65535, 0, 0);
-  xy_xyz (65535, 0, 0);
+#if 0
+  int old = spacing;
+  spacing = 65536/4;
+  xy_line (0, 0, 0, 65535);
+  xy_line (0, 65535, 65535, 65535);
+  xy_line (65535, 65535, 65535, 0);
+  xy_line (65535, 0, 0, 0);
+  spacing = old;
+#else
+  int n = 65536/4;
+  int i;
+  for (i = 0; i < 65536; i += n)
+    xy_xyz (0, i, 0);
+  for (i = 0; i < 65536; i += n)
+    xy_xyz (i, 65535, 0);
+  for (i = 65535; i >= 0; i -= n)
+    xy_xyz (65535, i, 0);
+  for (i = 65535; i >= 0; i -= n)
+    xy_xyz (i, 0, 0);
+#endif
 }
 
 static int clear = 0;
@@ -200,12 +210,14 @@ void xy_idle (void)
 #ifdef HAVE_LIBSDL
   Uint32 n = SDL_GetQueuedAudioSize (dev);
   int i;
-  clear = n < CHANNELS*2*44100 / 30;
+#if 1
+  clear = n < CHANNELS*2*44100 / 40;
   if (clear) {
-    n = CHANNELS*2*44100 / 20 - n;
-    for (i = 0; i < 1000; i++)
+    n = CHANNELS*2*44100 / 40 - n;
+    for (i = 0; i < 300; i++)
       xy_frame ();
   }
+#endif
 #endif
 }
 
