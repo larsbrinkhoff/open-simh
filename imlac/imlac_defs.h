@@ -42,6 +42,7 @@
 #define FLAG_KBD     000020
 #define FLAG_TTY_R   000010
 #define FLAG_SYNC    000002
+#define FLAG_LP      000001
 
 typedef struct {
   uint16 num;
@@ -58,12 +59,14 @@ extern t_bool build_dev_tab (void);
 extern void flag_on (uint16 flag);
 extern void flag_off (uint16 flag);
 extern uint16 flag_check (uint16 flag);
+extern void pcinc (int flag);
 extern void dp_on (int flag);
 extern uint16 dp_is_on (void);
 extern void crt_point (uint16 x, uint16 y);
 extern void crt_line (uint16 x1, uint16 y1, uint16 x2, uint16 y2);
 extern void crt_idle (void);
 extern void crt_hvc (void);
+extern void lp_hit (uint16 pc);
 extern void rom_data (uint16 *data);
 extern void rom_tty (void);
 extern void rom_stty (void);
@@ -81,6 +84,7 @@ extern uint16 memmask;
 extern SUBDEV *dev_tab[0100];
 extern DEVICE cpu_dev, irq_dev, rom_dev, dp_dev, crt_dev, kbd_dev;
 extern DEVICE tty_dev, ptr_dev, ptp_dev, sync_dev;
-extern DEVICE bel_dev, mse_dev;
+extern DEVICE bel_dev, mse_dev, lp_dev;
+extern int crt_lp_hit;
 
 #endif /* IMLAC_DEFS_H_ */

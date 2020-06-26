@@ -234,6 +234,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\imlac\imlac_lp.c"
+				>
+			</File>
+			<File
 				RelativePath="..\imlac\imlac_xy.c"
 				>
 			</File>

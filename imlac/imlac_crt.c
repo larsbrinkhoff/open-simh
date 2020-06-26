@@ -40,6 +40,8 @@ static int XY = 0;
 /* Debug */
 #define DBG             0001
 
+int crt_lp_hit = 0;
+
 static UNIT crt_unit = {
   UDATA (&crt_svc, UNIT_IDLE, 0)
 };
@@ -148,6 +150,10 @@ crt_point (uint16 x, uint16 y)
   if (crt_dev.flags & DEV_DIS)
     return;
   display_point ((x & 03777) >> 1, (y & 03777) >> 1, DISPLAY_INT_MAX, 0);
+  if (imlac_lp_hit) {
+    crt_lp_hit = 1;
+    imlac_lp_hit = 0;
+  }
 #endif
 }
 
@@ -165,6 +171,10 @@ crt_line (uint16 x1, uint16 y1, uint16 x2, uint16 y2)
   display_line ((x1 & 03777) >> 1, (y1 & 03777) >> 1,
                 (x2 & 03777) >> 1, (y2 & 03777) >> 1,
                 DISPLAY_INT_MAX);
+  if (imlac_lp_hit) {
+    crt_lp_hit = 1;
+    imlac_lp_hit = 0;
+  }
 #endif
 }
 

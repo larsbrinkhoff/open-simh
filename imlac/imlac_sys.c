@@ -46,7 +46,7 @@ DEVICE *sim_devices[] = {
   &sync_dev,  /* 7, 30 */
   &irq_dev,   /* 10, 14, 16 */
   /* &prot_dev, / * 11 */
-  /* &pen_dev, / * 13 */
+  &lp_dev,    /* 13 */
   &ptp_dev,   /* 27 */
   &mse_dev,   /* 70, 73 */
   &bel_dev,   /* 71 */

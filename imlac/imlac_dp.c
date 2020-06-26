@@ -41,6 +41,7 @@ static uint16 BLOCK = 0;
 static uint16 MIT8K;
 static uint16 SGR;
 static uint16 SYNC = 1;
+static int lp_sense = 0;
 
 /* Function declaration. */
 static uint16 dp_iot (uint16, uint16);
@@ -197,7 +198,7 @@ dp_opr(uint16 insn)
     break;
   case 014:
     sim_debug (DBG, &dp_dev, "DSTL%o ", insn & 3);
-    /* TODO: Light pen. */
+    lp_sense = insn & 1;
     break;
   }
   if (insn & 00020) { /* DDSP */
@@ -468,6 +469,11 @@ dp_svc(UNIT * uptr)
     sim_debug (DBG, &dp_dev, "\n");
   } else
     dp_insn (insn);
+
+  if (lp_sense && crt_lp_hit && SP == 0) {
+    lp_hit (DPC);
+    crt_lp_hit = 0;
+  }
 
   if (ON)
     sim_activate_after (&dp_unit, 2);

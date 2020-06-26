@@ -161,7 +161,7 @@ DEVICE rom_dev = {
   NULL, NULL, NULL, NULL, NULL, NULL
 };
 
-static void pcinc (int flag)
+void pcinc (int flag)
 {
   if (flag)
     PC = (PC + 1) & memmask;
