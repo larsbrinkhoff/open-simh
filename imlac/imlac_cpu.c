@@ -68,8 +68,8 @@ typedef struct {
   uint16 AC;
   uint16 L;
 } HISTORY;
-static HISTORY *history = NULL;
-static uint32 history_i, history_m, history_n;
+HISTORY *history = NULL;
+static uint32 history_i, history_j, history_m, history_n;
 
 /* Function declaration. */
 static t_stat cpu_set_hist (UNIT *uptr, int32 val, CONST char *cptr, void *desc);
