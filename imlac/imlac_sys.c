@@ -150,6 +150,26 @@ load_stty (FILE *fileref)
   }
 }
 
+static t_stat
+load_image (FILE *fileref)
+{
+  uint16 i;
+  int c;
+
+  for (;;) {
+    uint16 x;
+    c = Fgetc (fileref);
+    if (c == EOF)
+      return SCPE_OK;
+    x = c << 8;
+    c = Fgetc (fileref);
+    if (c == EOF)
+      return SCPE_IOERR;
+    x |= c;
+    M[i++] = x;
+  }
+}
+
 t_stat
 sim_load (FILE *fileref, CONST char *cptr, CONST char *fnam, int flag)
 {
@@ -161,6 +181,8 @@ sim_load (FILE *fileref, CONST char *cptr, CONST char *fnam, int flag)
     ;
   if (sim_switches & SWMASK ('P'))
     ;
+  if (sim_switches & SWMASK ('I'))
+    return load_image (fileref);
 
   return load_stty (fileref);
 }
