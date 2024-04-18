@@ -89,7 +89,9 @@ crt_reset (DEVICE *dptr)
     sim_cancel (&crt_unit);
   } else {
     display_reset ();
-    display_init (DIS_IMLAC, 1, dptr);
+    //display_init (DIS_IMLAC, 1, dptr);
+    extern void wwi_init(void);
+    wwi_init();
     sim_activate_abs (&crt_unit, 0);
     vid_register_quit_callback (&crt_quit_callback);
   }
@@ -101,6 +103,9 @@ void
 crt_point (uint16 x, uint16 y)
 {
   sim_debug (DBG, &crt_dev, "Point %d,%d\n", x, y);
+  extern void wwi_dot(int x, int y);
+  wwi_dot (4095 - ((x & 03776) << 1), 4095 - ((y & 03776) << 1));
+  return;
 #ifdef USE_DISPLAY
   if (crt_dev.flags & DEV_DIS)
     return;
@@ -112,6 +117,10 @@ void
 crt_line (uint16 x1, uint16 y1, uint16 x2, uint16 y2)
 {
   sim_debug (DBG, &crt_dev, "Line %d,%d - %d,%d\n", x1, y1, x2, y2);
+  extern void wwi_line(int x1, int y1, int x2, int y2);
+  wwi_line (4095 - ((x1 & 03776) << 1), 4095 - ((y1 & 03776) << 1),
+            4095 - ((x2 & 03776) << 1), 4095 - ((y2 & 03776) << 1));
+  return;
 #ifdef USE_DISPLAY
   if (crt_dev.flags & DEV_DIS)
     return;

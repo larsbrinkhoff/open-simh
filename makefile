@@ -1712,8 +1712,8 @@ IMLACD = ${SIMHD}/imlac
 IMLAC = ${IMLACD}/imlac_sys.c ${IMLACD}/imlac_cpu.c \
 	${IMLACD}/imlac_dp.c ${IMLACD}/imlac_crt.c ${IMLACD}/imlac_kbd.c \
 	${IMLACD}/imlac_tty.c ${IMLACD}/imlac_pt.c ${IMLACD}/imlac_bel.c \
-	${DISPLAYL}
-IMLAC_OPT = -I ${IMLACD} ${DISPLAY_OPT} ${AIO_CCDEFS}
+	${DISPLAYL} ${SIMHD}/wwi.c
+IMLAC_OPT = -I ${IMLACD} ${DISPLAY_OPT} ${AIO_CCDEFS} -lrt -lm -lpigpio
 
 
 STUBD = ${SIMHD}/stub
