@@ -4,6 +4,7 @@ attach tty 12345,connect=192.168.10.185:10016
 # Configure a bootstrap ROM; some programs require this.
 set rom type=stty
 #set crt disable
+set kbd type=console
 # Load SSV version 22.
 load -s ssv22.iml
 # Reset and run.

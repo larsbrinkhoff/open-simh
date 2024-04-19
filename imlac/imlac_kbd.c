@@ -43,12 +43,18 @@ static uint16 KBUF;
 static uint16 modifiers;
 static int kbd_type = KBD_DISPLAY;
 
+static t_stat (*kbd_poll)(void);
+static char kbd_buf[3];
+static char kbd_chars;
+
 /* Function declaration. */
 static t_stat kbd_svc (UNIT *uptr);
 static t_stat kbd_set_type (UNIT *uptr, int32 val, CONST char *cptr, void *desc);
 static t_stat kbd_show_type (FILE *st, UNIT *up, int32 v, CONST void *dp);
 static t_stat kbd_reset (DEVICE *dptr);
 static uint16 kbd_iot (uint16, uint16);
+static t_stat kbd_escape(void);
+static t_stat kbd_normal(void);
 
 static UNIT kbd_unit = {
   UDATA (&kbd_svc, UNIT_IDLE, 0)
@@ -107,9 +113,78 @@ static int32 kbd_translate (int32 ch)
   return table[ch];
 }
 
+static struct { const char *seq; uint32 sym; } something[] =
+{
+  { "\033OA", 0206 },
+  { "\033[A", 0206 },
+  { "\033OB", 0204 },
+  { "\033[B", 0204 },
+  { "\033OC", 0205 },
+  { "\033[C", 0205 },
+  { "\033OD", 0210 },
+  { "\033[D", 0210 },
+  { NULL, 0 }
+};
+
+static t_stat kbd_thingy(void)
+{
+  int i;
+
+  if (kbd_chars < 3)
+    return SCPE_OK;
+
+  kbd_poll = kbd_normal;
+
+  for (i = 0; something[i].seq != NULL; i++) {
+    if (memcmp(something[i].seq, kbd_buf, 3) == 0) {
+      kbd_chars = 0;
+      KBUF = something[i].sym;
+      return SCPE_KFLAG;
+    }
+  }
+
+  return kbd_poll();
+}
+
+static t_stat kbd_escape(void)
+{
+  t_stat ch;
+
+  ch = sim_poll_kbd ();
+  if (ch & SCPE_KFLAG) {
+    kbd_buf[kbd_chars++] = ch & 0177;
+    return kbd_thingy();
+  }
+
+  kbd_poll = kbd_normal;
+  return kbd_poll();
+}
+
+static t_stat kbd_normal(void)
+{
+  t_stat ch;
+
+  if (kbd_chars > 0) {
+    ch = kbd_buf[0];
+    kbd_chars--;
+    memmove(kbd_buf, kbd_buf+1, kbd_chars);
+    return ch | SCPE_KFLAG;
+  }
+
+  ch = sim_poll_kbd ();
+  if (ch == (033|SCPE_KFLAG)) {
+    kbd_buf[0] = ch & 0177;
+    kbd_chars = 1;
+    kbd_poll = kbd_escape;
+    return SCPE_OK;
+  }
+
+  return ch;
+}
+
 static t_stat kbd_svc (UNIT *uptr)
 {
-  t_stat ch = sim_poll_kbd ();
+  t_stat ch = kbd_poll ();
 
   if ((ch & SCPE_KFLAG) == 0) {
     sim_activate_after (&kbd_unit, 10000);
@@ -118,7 +193,7 @@ static t_stat kbd_svc (UNIT *uptr)
 
   if (ch & SCPE_BREAK)
     KBUF = 0231;
-  else
+  else if (KBUF == 0)
     KBUF = kbd_translate (ch & 0177);
   flag_on (FLAG_KBD);
   sim_debug (DBG, &kbd_dev, "Received character %03o\n", KBUF);
@@ -575,6 +650,9 @@ kbd_event (SIM_KEY_EVENT *ev)
 static t_stat
 kbd_reset (DEVICE *dptr)
 {
+  kbd_poll = kbd_normal;
+  kbd_chars = 0;
+
 #ifdef USE_DISPLAY
   vid_display_kb_event_process = NULL;
 #endif
