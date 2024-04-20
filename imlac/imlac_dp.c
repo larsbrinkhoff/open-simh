@@ -119,17 +119,21 @@ DEVICE sync_dev = {
 void
 dp_on (int flag)
 {
+  extern void wwi_begin(void), wwi_end(void);
+
   if (!ON && flag) {
     SP = 0;
     MIT8K = 0;
     sim_activate_abs (&dp_unit, 0);
     sim_debug (DBG, &dp_dev, "Display on\n");
+    wwi_begin();
   } else if (ON && !flag) {
     sim_cancel (&dp_unit);
     sim_debug (DBG, &dp_dev, "Display off\n");
     crt_idle ();
     if (SYNC && HALT)
       flag_on (FLAG_SYNC);
+    wwi_end();
   }
   ON = flag;
 }

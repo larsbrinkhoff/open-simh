@@ -11,6 +11,7 @@
 #include <sys/ioctl.h>
 #include <linux/spi/spidev.h>
 #include <pigpio.h>
+#include <pthread.h>
 
 #define DA_X 0xB0
 #define DA_Y 0x30
@@ -23,6 +24,44 @@
 static int current_x = -1;
 static int current_y = -1;
 static int spi_fd;
+
+static pthread_t th;
+static pthread_mutex_t lock;
+
+struct display_command {
+  void (*fn) (int x, int y);
+  int x, y;
+};
+
+static struct display_command *displaying, *drawing;
+static struct display_command *draw_next;
+
+static void * thread(void * arg)
+{
+  struct display_command *ptr = displaying;
+  int i;
+
+  for (;;) {
+    while (ptr->fn == NULL) {
+      pthread_mutex_lock(&lock);
+      ptr = displaying;
+      pthread_mutex_unlock(&lock);
+      i = 0;
+    }
+    ptr->fn (ptr->x, ptr->y);
+    ptr++;
+    i++;
+  }
+}
+
+static void command (void (*fn)(int, int), int x, int y)
+{
+  draw_next->fn = fn;
+  draw_next->x = x;
+  draw_next->y = y;
+  draw_next++;
+  draw_next->fn = NULL;
+}
 
 static void fatal(const char *message)
 {
@@ -68,16 +107,21 @@ static void set_da(int which, int value)
     fatal("sending spi message");
 }
 
-static void move_to_point(int x, int y)
+static void command_move(int x, int y)
 {
-  if (current_x == x && current_y == y)
-    return;
-
   set_da(DA_X, x);
   set_da(DA_Y, y);
   gpioWrite(PIN_MOVE, 1);
   delay_us(15);
   gpioWrite(PIN_MOVE, 0);
+}
+
+static void move_to_point(int x, int y)
+{
+  if (current_x == x && current_y == y)
+    return;
+
+  command (command_move, x, y);
 
   current_x = x;
   current_y = y;
@@ -93,16 +137,20 @@ static int to_int(float x)
   return i;
 }
 
+static void command_draw(int x, int y)
+{
+  set_da(DA_X, x);
+  set_da(DA_Y, y);
+  gpioWrite(PIN_DRAW, 1);
+  delay_us(50);
+  gpioWrite(PIN_DRAW, 0);
+}
+
 static void draw_segment(float sx, float sy)
 {
   int dx = to_int(sx);
   int dy = to_int(sy);
-
-  set_da(DA_X, dx);
-  set_da(DA_Y, dy);
-  gpioWrite(PIN_DRAW, 1);
-  delay_us(50);
-  gpioWrite(PIN_DRAW, 0);
+  command (command_draw, dx, dy);
 }
 
 void wwi_dot(int x, int y)
@@ -118,18 +166,19 @@ void wwi_line(int x1, int y1, int x2, int y2)
   float sx, sy, ax, ay, mx;
   int i, n;
 
+  if (current_x == x2 && current_y == y2) {
+    int tmp = x1;
+    x1 = x2;
+    x2 = tmp;
+    tmp = y1;
+    y1 = y2;
+    y2 = tmp;
+  }
+
   sx = 8.0/4095.0 * dx;
   sy = 8.0/4095.0 * dy;
   ax = fabs(sx);
   ay = fabs(sy);
-
-  if (ax <= 1.0 && ay <= 1.0) {
-    move_to_point(x1, y1);
-    draw_segment(sx, sy);
-    current_x = x2;
-    current_y = y2;
-    return;
-  }
 
   mx = ax > ay ? ax : ay;
   n = mx + .999999;
@@ -193,8 +242,33 @@ static void terminate(int sig)
   die();
 }
 
+void wwi_begin(void)
+{
+}
+
+void wwi_end(void)
+{
+  struct display_command *tmp;
+  pthread_mutex_lock(&lock);
+  tmp = displaying;
+  displaying = drawing;
+  drawing = tmp;
+  draw_next = drawing;
+  pthread_mutex_unlock(&lock);
+}
+
+#define LIST_SIZE 100000
+
 void wwi_init(void)
 {
+  static struct display_command list1[LIST_SIZE], list2[LIST_SIZE];
+
   init_spi();
   init_gpio();
+  displaying = list1;
+  drawing = list2;
+  displaying->fn = NULL;
+  drawing->fn = NULL;
+  draw_next = drawing;
+  pthread_create(&th, NULL, thread, NULL);
 }
