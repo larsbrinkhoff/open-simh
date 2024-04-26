@@ -1729,6 +1729,11 @@ TT2500 = ${TT2500D}/tt2500_sys.c ${TT2500D}/tt2500_cpu.c \
 TT2500_OPT = -I ${TT2500D} ${DISPLAY_OPT} ${AIO_CCDEFS}
 
 
+BCC500D = ${SIMHD}/bcc500
+BCC500 = ${BCC500D}/bcc500_sys.c ${BCC500D}/bcc500_cpu.c
+BCC500_OPT = -I ${BCC500D}
+
+
 PDP8D = ${SIMHD}/PDP8
 PDP8 = ${PDP8D}/pdp8_cpu.c ${PDP8D}/pdp8_clk.c ${PDP8D}/pdp8_df.c \
 	${PDP8D}/pdp8_dt.c ${PDP8D}/pdp8_lp.c ${PDP8D}/pdp8_mt.c \
@@ -2327,6 +2332,12 @@ ${BIN}tt2500${EXE} : ${TT2500} ${SIM}
 ifneq (,$(call find_test,${TT2500},tt2500))
 	$@ $(call find_test,${TT2500D},tt2500) ${TEST_ARG}
 endif
+
+bcc500 : ${BIN}bcc500${EXE}
+
+${BIN}bcc500${EXE} : ${BCC500} ${SIM}
+	${MKDIRBIN}
+	${CC} ${BCC500} ${SIM} ${BCC500_OPT} ${CC_OUTSPEC} ${LDFLAGS}
 
 pdp11 : ${BIN}pdp11${EXE}
 
