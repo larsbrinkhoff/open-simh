@@ -137,7 +137,7 @@ tty_r_svc(UNIT *uptr)
       tmxr_poll_rx (&tty_desc);
       ch = tmxr_getc_ln (&tty_ldsc);
       if (ch & TMXR_VALID) {
-        RBUF = sim_tt_inpcvt (ch, TT_GET_MODE (tty_unit[0].flags));
+        RBUF = sim_tt_inpcvt (ch, TT_GET_MODE (uptr->flags));
         sim_debug (DBG, &tty_dev, "Received character %03o\n", RBUF);
         flag_on (FLAG_TTY_R);
         return SCPE_OK;
@@ -163,18 +163,26 @@ tty_t_svc(UNIT *uptr)
 {
   int32 ch;
 
-  tmxr_poll_tx (&tty_desc);
-
-  if (!tmxr_txdone_ln (&tty_ldsc))
-    return SCPE_OK;
-
-  ch = sim_tt_outcvt (TBUF, TT_GET_MODE (tty_unit[1].flags));
-  if (tmxr_putc_ln (&tty_ldsc, ch) == SCPE_STALL) {
-    sim_activate_after (&tty_unit[1], 200);
+  if (uptr->fileref != NULL) {
+    unsigned char buf = sim_tt_outcvt (TBUF, TT_GET_MODE (tty_unit[1].flags));
+    if (sim_fwrite (&buf, 1, 1, uptr->fileref) == 1) {
+      sim_debug (DBG, &tty_dev, "Transmitted character %03o to file\n", TBUF);
+      flag_on (FLAG_TTY_T);
+    }
   } else {
-    sim_debug (DBG, &tty_dev, "Transmitted character %03o\n", TBUF);
     tmxr_poll_tx (&tty_desc);
-    flag_on (FLAG_TTY_T);
+
+    if (!tmxr_txdone_ln (&tty_ldsc))
+      return SCPE_OK;
+
+    ch = sim_tt_outcvt (TBUF, TT_GET_MODE (tty_unit[1].flags));
+    if (tmxr_putc_ln (&tty_ldsc, ch) == SCPE_STALL) {
+      sim_activate_after (&tty_unit[1], 200);
+    } else {
+      sim_debug (DBG, &tty_dev, "Transmitted character %03o\n", TBUF);
+      tmxr_poll_tx (&tty_desc);
+      flag_on (FLAG_TTY_T);
+    }
   }
 
   return SCPE_OK;
@@ -273,6 +281,7 @@ tty_attach (UNIT *uptr, CONST char *cptr)
     r = attach_unit (uptr, cptr);
     if (r != SCPE_OK)
       return r;
+    tty_unit[1].fileref = uptr->fileref;
     break;
   default:
     return SCPE_ARG;
@@ -284,6 +293,7 @@ tty_attach (UNIT *uptr, CONST char *cptr)
 static t_stat
 tty_detach (UNIT *uptr)
 {
+  detach_unit (&tty_unit[1]);
   if (!(uptr->flags & UNIT_ATT))
     return SCPE_OK;
   if (sim_is_active (uptr))
