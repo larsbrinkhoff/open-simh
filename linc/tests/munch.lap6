@@ -1,0 +1,42 @@
+	@20
+	CLR
+        ROR 12	[Clear Z
+
+#1A	LSW	[Get switches
+	ADM	[Add to 1 = v
+#1B	 1
+	JMP 2A	[Rotate A-Z
+	BCO	[XOR with v
+         1
+
+        BCL i
+         0007
+	ROL 11	[Rotate but leave Z alone
+	STC 3   [Store 9 bits from A in 3
+	
+        ZTA
+	BCL i
+         0003
+	ROL 12	[Store 9 bits from Z in A
+
+	DIS 3
+	JMP 1A
+
+        [Rotate A-Z six bits to the right
+#2A	STC 4
+        ZTA
+	BCL i
+	 7740
+	ROL 1
+	ZZZ
+	 ADD 1B
+	ROL 6
+	STC 5
+
+	ADD 4
+	ROR 6
+	BCL i
+	 7700
+	BSE
+	 5
+	JMP 0

@@ -1,0 +1,43 @@
+reset
+set throttle 125k
+;deposit lsw 0112
+deposit lsw 0121
+;set debug stderr
+;set dpy debug
+deposit 0020 0011
+deposit 0021 0312
+deposit 0022 0517
+deposit 0023 1140
+deposit 0024 0001
+deposit 0025 6042
+deposit 0026 1640
+deposit 0027 0001
+deposit 0030 1560
+deposit 0031 0007
+deposit 0032 0251
+deposit 0033 4003
+deposit 0034 0005
+deposit 0035 1560
+deposit 0036 0003
+deposit 0037 0252
+deposit 0040 0143
+deposit 0041 6022
+deposit 0042 4004
+deposit 0043 0005
+deposit 0044 1560
+deposit 0045 7740
+deposit 0046 0241
+deposit 0047 0455
+deposit 0050 2024
+deposit 0051 0246
+deposit 0052 4005
+deposit 0053 2004
+deposit 0054 0306
+deposit 0055 1560
+deposit 0056 7700
+deposit 0057 1600
+deposit 0060 0005
+deposit 0061 6000
+deposit p 20
+;break 30
+c
