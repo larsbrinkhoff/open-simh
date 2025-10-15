@@ -1,0 +1,22 @@
+foo,  lat     /load the 18-bit AC from the Test Word
+      add v   /add the contents of memory location v to the AC
+      dac v   /deposit the contents of the AC into v
+      rcl 9s  /Rotate the combined AC-IO 9 bits to the left
+      xor v   /exclusive-or the contents of v into the AC
+      dpy-i 300 /plot point at x = high ten bits of AC, y = high ten bits of IO
+      jmp foo
+
+loop:	move x,[1001002]	;Munching squares algorithm.
+	addb x,v
+	rotc x,-22
+	xor x,v
+
+ LSW
+ ADM
+  1 [V
+ ROR 6
+ BCL i
+  7700
+ BCO 1
+ ZTA
+ DIS 1
