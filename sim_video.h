@@ -155,6 +155,14 @@ extern "C" {
 #define SIM_KEY_KP_MULTIPLY    103
 #define SIM_KEY_KP_DIVIDE      104
 
+#define SIM_KEY_PARAGRAPH      105
+#define SIM_KEY_PLUS           106
+#define SIM_KEY_APOSTROHE      107
+#define SIM_KEY_A_RING         108
+#define SIM_KEY_UMLAUT         109
+#define SIM_KEY_O_RING         110
+#define SIM_KEY_A_UMLAUT       111
+
 #define SIM_KEY_UNKNOWN        200
 
 #define SIM_ALPHA_NONE         1

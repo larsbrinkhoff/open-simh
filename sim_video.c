@@ -1149,6 +1149,20 @@ switch (key) {
     case SDLK_BACKQUOTE:
         return SIM_KEY_BACKQUOTE;
 
+    case SDLK_PLUS:
+        return SIM_KEY_PLUS;
+
+    /*
+    case + (45,43)
+    case ´ (46,1073741824)
+    case å (47,229)
+    case ¨ (48,1073741824)
+    case ö (51,246)
+    case ä (52,228)
+    case § (53,167)
+    case - (56,45)
+    */
+
     case SDLK_a:
         return SIM_KEY_A;
 
