@@ -1007,6 +1007,7 @@ cpu_reset(DEVICE *dptr)
   sim_brk_types = SWMASK('E') | SWMASK('R') | SWMASK('W');
   sim_brk_dflt = SWMASK('E');
   sim_vm_cmd = linc_cmd;
+  sim_set_throt(1, "125k");
   return SCPE_OK;
 }
 

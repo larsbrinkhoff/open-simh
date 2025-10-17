@@ -30,6 +30,7 @@
 #define LINC_DEFS_H_  0
 
 #include "sim_defs.h"
+#include "sim_video.h"
 
 #define STOP_HALT       1
 #define STOP_IBKPT      2
@@ -66,6 +67,7 @@ extern t_stat cpu_do(void);
 extern void dpy_dis(uint16 h, uint16 x, uint16 y);
 extern void crt_point (uint16 x, uint16 y);
 extern void crt_toggle_fullscreen(void);
+extern int kbd_event(SIM_KEY_EVENT *ev);
 extern uint16 kbd_key(uint16 wait);
 extern int kbd_struck(void);
 extern void tape_op(void);
