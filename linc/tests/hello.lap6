@@ -1,0 +1,33 @@
+	@1
+	JMP 1A
+	@15
+	RCG
+	 7|300
+	@20
+	RDC	[GET FONT
+	 1|304
+#1A	SET i 1 [X POSITION
+	 200
+	SET i 2 [TEXT DATA
+	 4|2A-1
+	SET i 3 [TEXT LENGTH
+	 2A-2B+2A-2B
+#1B	LDH i 2
+	ROL 1
+	ADA i
+	 400
+	STC 4
+	DSC i 4
+	DSC i 4
+	LDA i
+	 2
+	ADM
+	 1
+	XSK i 3
+	 JMP 1B
+	KST
+	 JMP 1A
+	KBD
+	JMP 15	[EXIT TO LAP6
+#2A	"HELLO WORLD„
+#2B
