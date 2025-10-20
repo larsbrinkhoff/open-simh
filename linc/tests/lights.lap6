@@ -1,0 +1,9 @@
+	@1771
+	LDA i
+	 7777
+	ROL i 1
+	BSE i
+	 i
+	ATR
+	JMP 2A	
+#2A	JMP p
