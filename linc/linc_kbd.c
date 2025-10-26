@@ -159,6 +159,7 @@ static void kbd_convert(uint32 key)
     break;
   case SIM_KEY_SHIFT_L: /* CASE _ */
   case SIM_KEY_SHIFT_R:
+  case SIM_KEY_ESC:
     kbd_code = KBD_CASE;
     break;
   case SIM_KEY_A: /* A " */
