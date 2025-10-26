@@ -78,7 +78,7 @@ get_octal_word(FILE *fileref, uint16 *x)
     c = Fgetc(fileref);
     if (c == EOF)
       return SCPE_EOF;
-    if (c >= '0' && c <= '9') {
+    if (c >= '0' && c <= '7') {
       y = c - '0';
       i++;
       break;
@@ -88,7 +88,7 @@ get_octal_word(FILE *fileref, uint16 *x)
     c = Fgetc(fileref);
     if (c == EOF)
       return SCPE_IOERR;
-    if (c < '0' || c > '9')
+    if (c < '0' || c > '7')
       break;
     y <<= 3;
     y |= c - '0';
