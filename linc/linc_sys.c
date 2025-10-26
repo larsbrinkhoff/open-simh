@@ -224,7 +224,9 @@ static t_stat fprint_index(FILE *of, uint16 insn, uint16 addr)
 static void fprint_set(FILE *of, uint16 insn, uint16 addr)
 {
   fprintf(of, "SET");
-  fprint_index(of, insn, addr);
+  if (insn & IMASK)
+    fprintf(of, " i");
+  fprintf(of, " %o", insn & BMASK);
   fprint_next(of, addr);
 }
 
@@ -301,8 +303,9 @@ static void fprint_skip(FILE *of, uint16 insn)
     fprintf(of, "ZZZ");
     break;
   default:
-    fprintf(of, "%04o", insn);
-    return;
+    fprintf(of, "SKP");
+    snprintf(beta, sizeof beta, "%o", insn & 017);
+    break;
   }
   if (insn & IMASK)
     fprintf(of, " i" );
@@ -535,7 +538,7 @@ t_stat fprint_sym(FILE *of, t_addr addr, t_value *val, UNIT *uptr, int32 sw)
   case 00700:
   case 00740:
     fprint_tape(of, *val, addr);
-    break;
+    return -1;
   case 01000:
     return fprint_lda(of, *val, addr);
   case 01040:
