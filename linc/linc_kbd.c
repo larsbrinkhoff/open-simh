@@ -12,7 +12,7 @@
 
 #define P (*(uint16 *)cpu_reg[0].loc)
 #define A (*(uint16 *)cpu_reg[2].loc)
-#define paused (*(int *)cpu_reg[11].loc)
+#define paused (*(int *)cpu_reg[12].loc)
 
 static t_stat kbd_svc(UNIT *uptr);
 static t_stat kbd_reset(DEVICE *dptr);
