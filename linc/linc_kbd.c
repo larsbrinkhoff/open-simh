@@ -11,7 +11,7 @@
 #define KBD_W     052  /* CASE W moves up one line. */
 
 #define A (*(uint16 *)cpu_reg[2].loc)
-#define paused (*(int *)cpu_reg[11].loc)
+#define paused (*(int *)cpu_reg[12].loc)
 
 static t_stat kbd_svc(UNIT *uptr);
 static t_stat kbd_reset(DEVICE *dptr);

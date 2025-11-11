@@ -116,6 +116,12 @@ Options for the CRT device units:
 
 ### CPU
 
+Models:
+- `CLASSIC` is the Lincoln Laboratory machine.
+- `MICRO-LINC` is the Spear, Inc machine.
+
+Memory can be set to `1K`, `2K`, `4K`, `8K`, `16K`, or `16K`.
+
 Registers:
 - P - Instruction location, 10 bits.
 - C - Current instruction, 12 bits.

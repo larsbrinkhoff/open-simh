@@ -34,8 +34,8 @@ static t_stat sam_reset(DEVICE *dptr);
 /* Debug */
 #define DBG             0001
 
-#define SSW (*(uint16 *)cpu_reg[10].loc)
-#define SAM ((uint16 *)cpu_reg[14].loc)
+#define SSW (*(uint16 *)cpu_reg[11].loc)
+#define SAM ((uint16 *)cpu_reg[15].loc)
 
 static UNIT sam_unit = {
   UDATA(&sam_svc, UNIT_IDLE, 0)
