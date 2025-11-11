@@ -31,7 +31,8 @@
 int32 sim_emax = 1;
 char sim_name[] = "LINC";
 
-uint16 M[MEMSIZE];
+uint16 M[MAXMEM];
+uint16 memsize = 2048;
 REG *sim_PC = &cpu_reg[0];
 
 DEVICE *sim_devices[] = {
@@ -104,7 +105,7 @@ t_stat
 sim_load(FILE *fileref, CONST char *cptr, CONST char *fnam, int flag)
 {
   t_stat (*get_word)(FILE *fileref, uint16 *x) = get_binary_word;
-  t_addr addr, length = MEMSIZE, start = 0, end;
+  t_addr addr, length = memsize, start = 0, end;
   int16 forward_offset = 0, reverse_offset;
   uint16 block_size;
   long offset = 0;
@@ -137,8 +138,8 @@ sim_load(FILE *fileref, CONST char *cptr, CONST char *fnam, int flag)
   }
 
   end = start + length;
-  if (end > MEMSIZE)
-    end = MEMSIZE;
+  if (end > memsize)
+    end = memsize;
 
   sim_fseek(fileref, offset, SEEK_SET);
 
@@ -279,7 +280,7 @@ static void fprint_skip(FILE *of, uint16 insn)
     fprintf(of, "KST");
     break;
   case 040: case 041: case 042: case 043: case 044: case 045:
-    fprintf(of, "SNS ");
+    fprintf(of, "SNS");
     snprintf(beta, sizeof beta, "%o", insn & 7);
     break;
   case 046:
@@ -338,12 +339,12 @@ static void fprint_opr(FILE *of, uint16 insn)
 
 static void fprint_lmb(FILE *of, uint16 insn)
 {
-  fprintf(of, "LMB ");
+  fprintf(of, "LMB %o", insn & 037);
 }
 
 static void fprint_umb(FILE *of, uint16 insn)
 {
-  fprintf(of, "UMB ");
+  fprintf(of, "UMB %o", insn & 037);
 }
 
 static void fprint_tape(FILE *of, uint16 insn, uint16 addr)

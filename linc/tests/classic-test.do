@@ -1,5 +1,7 @@
 cd %~p0
 
+set cpu classic 2k
+
 # The tests check writing to the tape, so use a copy.
 copy classic-test.linc clobbered.linc
 attach tape0 clobbered.linc
@@ -97,8 +99,8 @@ deposit INTREQ 1
 call test 704 ENIT1  110
 call test  71 MISCTS 111
 
-echo DIAGNOSTICS PASSED
-quit
+;quit
+return
 
 :test
 echo *** Test: %1 - %2 ***

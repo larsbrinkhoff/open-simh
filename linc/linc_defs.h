@@ -49,7 +49,16 @@
 #define UMASK  00010  /* Tape unit bit. */
 #define BMASK  00017  /* Beta; index register. */
 
-#define MEMSIZE  2048
+#define MAXMEM  32768
+extern uint16 memsize;
+
+#define CPU_DEV_V_MODEL     (DEV_V_UF + 0)
+#define CPU_DEV_MODEL       (1 << CPU_DEV_V_MODEL)
+#define CPU_DEV_CLASSIC     (0 << CPU_DEV_V_MODEL)
+#define CPU_DEV_MICRO_LINC  (1 << CPU_DEV_V_MODEL)
+
+#define CLASSIC_LINC  ((cpu_dev.flags & CPU_DEV_MODEL) == CPU_DEV_CLASSIC)
+#define MICRO_LINC    ((cpu_dev.flags & CPU_DEV_MODEL) == CPU_DEV_MICRO_LINC)
 
 extern REG cpu_reg[];
 extern uint16 M[];

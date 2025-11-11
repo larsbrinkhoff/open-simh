@@ -10,10 +10,11 @@
 #define A (*(uint16 *)cpu_reg[2].loc)
 #define S (*(uint16 *)cpu_reg[6].loc)
 #define B (*(uint16 *)cpu_reg[7].loc)
-#define LSW (*(uint16 *)cpu_reg[8].loc)
-#define RSW (*(uint16 *)cpu_reg[9].loc)
-#define paused (*(int *)cpu_reg[11].loc)
-#define IBZ (*(int *)cpu_reg[12].loc)
+#define TA (*(uint16 *)cpu_reg[8].loc)
+#define LSW (*(uint16 *)cpu_reg[9].loc)
+#define RSW (*(uint16 *)cpu_reg[10].loc)
+#define paused (*(int *)cpu_reg[12].loc)
+#define IBZ (*(int *)cpu_reg[13].loc)
 
 #define ACC_START    3
 #define ACC_REVERSE  6
@@ -47,6 +48,7 @@
 static uint16 BLOCK_GROUP;
 static int16 CURRENT_BLOCK;
 static int16 WANTED_BLOCK;
+static int cycles_per_word = 20;
 
 static t_stat tape_svc(UNIT *uptr);
 static t_stat tape_reset(DEVICE *dptr);
@@ -316,9 +318,9 @@ static t_stat tape_svc(UNIT *uptr)
   }
 
   if (uptr->SPEED != 0)
-    /* The tape takes 160 microseconds between words.  This is
-       approximately 20 memory cycles, 8 microseconds each. */
-    sim_activate(uptr, 20);
+    /* The tape takes 160 microseconds between words.  On a classic LINC,
+       this is approximately 20 memory cycles at 8 microseconds each. */
+    sim_activate(uptr, cycles_per_word);
 
   pos = uptr->POS / MAX_SPEED;
   if (pos < 0)
@@ -383,6 +385,12 @@ static t_stat tape_svc(UNIT *uptr)
 
 static t_stat tape_reset(DEVICE *dptr)
 {
+  if (CLASSIC_LINC)
+    cycles_per_word = 20;
+  else if (MICRO_LINC)
+    cycles_per_word = 160;
+  else
+    return SCPE_IERR;
   return SCPE_OK;
 }
 

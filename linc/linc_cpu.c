@@ -31,6 +31,18 @@
 #define DBG_CPU   0001
 #define DBG_INT   0002
 
+#define DEV_MODEL          CPU_DEV_MODEL
+#define DEV_CLASSIC        CPU_DEV_CLASSIC
+#define DEV_MICRO_LINC     CPU_DEV_MICRO_LINC
+#define DEV_V_MEMORY       (DEV_V_UF + 1)
+#define DEV_MEMORY         (7 << DEV_V_MEMORY)
+#define DEV_1K             (0 << DEV_V_MEMORY)
+#define DEV_2K             (1 << DEV_V_MEMORY)
+#define DEV_4K             (2 << DEV_V_MEMORY)
+#define DEV_8K             (3 << DEV_V_MEMORY)
+#define DEV_16K            (4 << DEV_V_MEMORY)
+#define DEV_32K            (5 << DEV_V_MEMORY)
+
 #define INSN_ENI  00010
 #define INSN_NOP  00016
 #define INSN_OPR  00500
@@ -49,12 +61,16 @@ static uint16 A;
 static uint16 L;
 static uint16 Z;
 static uint16 R;
+static uint16 TA;
 static uint16 LSW, RSW, SSW;
 static uint16 SAM[16];
 static uint16 XL[12];
+static uint16 *LP = &M[0];
+static uint16 *UP = &M[0];
 static int paused;
 static int IBZ;
 static int OVF;
+static int FLAG;
 static int INTREQ;
 static int ENI = 0;
 static int PINFF;
@@ -77,12 +93,16 @@ static uint32 history_i, history_m, history_n;
 static t_stat cpu_ex(t_value *vptr, t_addr ea, UNIT *uptr, int32 sw);
 static t_stat cpu_dep(t_value val, t_addr ea, UNIT *uptr, int32 sw);
 static t_stat cpu_reset(DEVICE *dptr);
+static t_stat cpu_set_model(UNIT *uptr, int32 val, CONST char *cptr, void *desc);
+static t_stat cpu_show_model(FILE *st, UNIT *uptr, int32 val, CONST void *desc);
+static t_stat cpu_set_memory(UNIT *uptr, int32 val, CONST char *cptr, void *desc);
+static t_stat cpu_show_memory(FILE *st, UNIT *uptr, int32 val, CONST void *desc);
 static t_stat cpu_set_hist(UNIT *uptr, int32 val, CONST char *cptr, void *desc);
 static t_stat cpu_show_hist(FILE *st, UNIT *uptr, int32 val, CONST void *desc);
 static t_stat linc_boot(int32 flag, CONST char *ptr);
 static t_stat linc_do(int32 flag, CONST char *ptr);
 
-static UNIT cpu_unit = { UDATA(NULL, UNIT_FIX + UNIT_BINK, MEMSIZE) };
+static UNIT cpu_unit = { UDATA(NULL, UNIT_FIX + UNIT_BINK, MAXMEM) };
 
 REG cpu_reg[] = {
   { ORDATAD(P,   P,   10, "Program Location") },
@@ -93,6 +113,7 @@ REG cpu_reg[] = {
   { ORDATAD(R,   R,    6, "Relay Register") },
   { ORDATAD(S,   S,   12, "Memory Address") },
   { ORDATAD(B,   B,   12, "Memory Buffer") },
+  { ORDATAD(TA,  TA,  12, "Tape Accumulator") },
   { ORDATAD(LSW, LSW, 12, "Left Switches") },
   { ORDATAD(RSW, RSW, 12, "Right Switches") },
   { ORDATAD(SSW, SSW,  6, "Sense Switches") },
@@ -100,6 +121,7 @@ REG cpu_reg[] = {
   { FLDATAD(paused, paused, 1, "Paused") },
   { FLDATAD(IBZ,    IBZ,    1, "Interblock zone") },
   { FLDATAD(OVF,    OVF,    1, "Overflow") },
+  { FLDATAD(FLAG,   FLAG,   1, "Flag") },
   { FLDATAD(INTREQ, INTREQ, 1, "Interrupt") },
   { FLDATAD(ENI,    ENI,    1, "Interrupt Enable") },
   { FLDATAD(PIN,    PINFF,  1, "Pause Interrupt") },
@@ -110,6 +132,16 @@ REG cpu_reg[] = {
 };
 
 static MTAB cpu_mod[] = {
+  { MTAB_XTD|MTAB_VDV, 0, "MODEL", NULL, NULL, &cpu_show_model },
+  { MTAB_XTD|MTAB_VDV, DEV_CLASSIC, NULL, "CLASSIC", &cpu_set_model },
+  { MTAB_XTD|MTAB_VDV, DEV_MICRO_LINC, NULL, "MICRO-LINC", &cpu_set_model },
+  { MTAB_XTD|MTAB_VDV, 0, "MEMORY", NULL, NULL, &cpu_show_memory },
+  { MTAB_XTD|MTAB_VDV, DEV_1K, NULL, "1K", &cpu_set_memory },
+  { MTAB_XTD|MTAB_VDV, DEV_2K, NULL, "2K", &cpu_set_memory },
+  { MTAB_XTD|MTAB_VDV, DEV_4K, NULL, "4K", &cpu_set_memory },
+  { MTAB_XTD|MTAB_VDV, DEV_8K, NULL, "8K", &cpu_set_memory },
+  { MTAB_XTD|MTAB_VDV, DEV_16K, NULL, "16K", &cpu_set_memory },
+  { MTAB_XTD|MTAB_VDV, DEV_32K, NULL, "32K", &cpu_set_memory },
   { MTAB_XTD|MTAB_VDV|MTAB_NMO|MTAB_SHP, 0, "HISTORY", "HISTORY",
     &cpu_set_hist, &cpu_show_hist },
   { 0 }
@@ -125,7 +157,7 @@ DEVICE cpu_dev = {
   "CPU", &cpu_unit, cpu_reg, cpu_mod,
   0, 8, 11, 1, 8, 12,
   &cpu_ex, &cpu_dep, &cpu_reset,
-  NULL, NULL, NULL, NULL, DEV_DEBUG, 0, cpu_deb,
+  NULL, NULL, NULL, NULL, DEV_CLASSIC | DEV_2K | DEV_DEBUG, 0, cpu_deb,
   NULL, NULL, NULL, NULL, NULL, NULL
 };
 
@@ -172,7 +204,11 @@ static void cpu_4ndxa()
 
 static void cpu_mem_read(void)
 {
-  cpu_set_B(M[S & AMASK]);
+  uint16 a = S & AMASK;
+  if (a & 04000)
+    cpu_set_B(UP[a]);
+  else
+    cpu_set_B(LP[a]);
   sim_interval--;
   if (sim_brk_summ && sim_brk_test(S & AMASK, SWMASK('R')))
     stop_reason = STOP_RBKPT;
@@ -180,7 +216,11 @@ static void cpu_mem_read(void)
 
 static void cpu_mem_modify(void)
 {
-  M[S & AMASK] = B;
+  uint16 a = S & AMASK;
+  if (a & 04000)
+    UP[a] = B;
+  else
+    LP[a] = B;
   if (sim_brk_summ && sim_brk_test(S & AMASK, SWMASK('W')))
     stop_reason = STOP_WBKPT;
 }
@@ -263,10 +303,27 @@ cpu_misc(void)
     stop_reason = STOP_HALT;
     break;
   case 00002: //PDP
-    sim_debug(DBG_CPU, &cpu_dev, "This is not a PDP-12.\n");
+    if (MICRO_LINC)
+      FLAG = 1;
+    else
+      sim_debug(DBG_CPU, &cpu_dev, "This is not a PDP-12.\n");
+    break;
+  case 00003:
+    if (MICRO_LINC)
+      ; //Proceed from Tape Pause
+    break;
+  case 00004:
+    if (MICRO_LINC)
+      A = TA;
     break;
   case 00005: //ZTA
     A = Z >> 1;
+    break;
+  case 00007:
+    if (MICRO_LINC) {
+      sim_debug(DBG_INT, &cpu_dev, "Interrupt disabled.\n");
+      ENI = 0;
+    }
     break;
   case 00010: //ENI
     sim_debug(DBG_INT, &cpu_dev, "Interrupt enabled.\n");
@@ -275,9 +332,12 @@ cpu_misc(void)
   case 00011: //CLR
     A = L = Z = 0;
     break;
-  case 00012: //DIN
-    sim_debug(DBG_INT, &cpu_dev, "Interrupt disabled.\n");
-    ENI = 0;
+  case 00012:
+    if (CLASSIC_LINC) {
+      sim_debug(DBG_INT, &cpu_dev, "Interrupt disabled.\n");
+      ENI = 0;
+    } else if (MICRO_LINC)
+      FLAG = 0;
     break;
   case 00013: //Write gate on.
     break;
@@ -390,6 +450,14 @@ int cpu_skip(void)
   case 015: //KST
     flag = kbd_struck();
     break;
+  case 016:
+    if (MICRO_LINC)
+      ; // TAPE BUSY
+    break;
+  case 017:
+    if (MICRO_LINC)
+      flag = FLAG;
+    break;
   case 040: case 041: case 042: case 043: case 044: case 045: //SNS
     flag = SSW & (1 << (C & 7));
     break;
@@ -448,14 +516,18 @@ static void cpu_opr(void)
 
 static void cpu_lmb(void)
 {
-  /* Lower memory bank. */
-  sim_debug(DBG_CPU, &cpu_dev, "This is not micro-LINC 300.\n");
+  if (CLASSIC_LINC)
+    return;
+  Z = 060 | ((LP - M) >> 4);
+  LP = M + 1024 * (C & 037);
 }
 
 static void cpu_umb(void)
 {
-  /* Upper memory bank. */
-  sim_debug(DBG_CPU, &cpu_dev, "This is not micro-LINC 300.\n");
+  if (CLASSIC_LINC)
+    return;
+  Z = 070 | ((UP - M + 1024) >> 4);
+  UP = M + 1024 * (C & 037) - 1024;
 }
 
 static void cpu_tape(void)
@@ -931,7 +1003,7 @@ static t_stat cpu_ex(t_value *vptr, t_addr ea, UNIT *uptr, int32 sw)
 {
   if (vptr == NULL)
     return SCPE_ARG;
-  if (ea >= MEMSIZE)
+  if (ea >= memsize)
     return SCPE_NXM;
   *vptr = M[ea];
   return SCPE_OK;
@@ -939,9 +1011,40 @@ static t_stat cpu_ex(t_value *vptr, t_addr ea, UNIT *uptr, int32 sw)
 
 static t_stat cpu_dep(t_value val, t_addr ea, UNIT *uptr, int32 sw)
 {
-  if (ea >= MEMSIZE)
+  if (ea >= memsize)
     return SCPE_NXM;
   M[ea] = val & WMASK;
+  return SCPE_OK;
+}
+
+static t_stat cpu_set_model(UNIT *uptr, int32 val, CONST char *cptr, void *desc)
+{
+  cpu_dev.flags &= ~DEV_MODEL;
+  cpu_dev.flags |= val;
+  return SCPE_OK;
+}
+
+static t_stat cpu_show_model(FILE *st, UNIT *uptr, int32 val, CONST void *desc)
+{
+  if (CLASSIC_LINC)
+    fprintf(st, "CLASSIC");
+  else if (MICRO_LINC)
+    fprintf(st, "MICRO-LINC");
+  else
+    return SCPE_IERR;
+  return SCPE_OK;
+}
+
+static t_stat cpu_set_memory(UNIT *uptr, int32 val, CONST char *cptr, void *desc)
+{
+  val >>= DEV_V_MEMORY;
+  memsize = 1024 << val;
+  return SCPE_OK;
+}
+
+static t_stat cpu_show_memory(FILE *st, UNIT *uptr, int32 val, CONST void *desc)
+{
+  fprintf(st, "%dK", memsize);
   return SCPE_OK;
 }
 
