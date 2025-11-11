@@ -56,6 +56,14 @@
 #define MAXMEM  32768
 extern uint16 memsize;
 
+#define CPU_DEV_V_MODEL     (DEV_V_UF + 0)
+#define CPU_DEV_MODEL       (1 << CPU_DEV_V_MODEL)
+#define CPU_DEV_CLASSIC     (0 << CPU_DEV_V_MODEL)
+#define CPU_DEV_MICRO_LINC  (1 << CPU_DEV_V_MODEL)
+
+#define CLASSIC_LINC  ((cpu_dev.flags & CPU_DEV_MODEL) == CPU_DEV_CLASSIC)
+#define MICRO_LINC    ((cpu_dev.flags & CPU_DEV_MODEL) == CPU_DEV_MICRO_LINC)
+
 /* The CRT device refresh rate in milliseconds.  The MUS device has to
    know this to throttle the CPU cycle rate in a way that doesn't
    impede the CRT refresh. */
@@ -88,6 +96,7 @@ extern uint16 kbd_key(uint16 wait);
 extern int kbd_struck(void);
 extern void tape_op(void);
 extern t_stat tape_metadata(FILE *, uint16 *, int16 *, int16 *);
+extern void tty_output(UNIT *uptr);
 
 #ifdef LINC_USE_AUDIO
 extern void mus_sample(uint16 A, uint16 S, uint16 Z, int32 cycles);
