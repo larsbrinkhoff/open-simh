@@ -147,6 +147,10 @@ Options for the MUS device:
 
 ### CPU
 
+Models:
+- `CLASSIC` is the Lincoln Laboratory machine.
+- `MICRO-LINC` is the Spear, Inc machine.
+
 Memory can be set to `1K`, `2K`, `4K`, `8K`, `16K`, or `16K`.
 
 Registers:
