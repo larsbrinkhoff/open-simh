@@ -1,19 +1,20 @@
 cd %~p0
 
-set cpu classic 2k
+set crt disabled
+set cpu micro-linc 4k
 reset
 
 # The tests check writing to the tape, so use a copy.
-copy classic-test.linc clobbered.linc
+copy 300-test.dsk clobbered.linc
 attach tape0 clobbered.linc
 
 echo CONTRL
-load -e classic-test.linc block=0 start=0 length=400
+load -e 300-test.dsk block=0 start=0 length=400
 break 34
 
 # Special treatment for this test, because it's supposed to halt.
 echo *** Test: 70 - HLTTST ***
-load -e classic-test.linc block=1 start=400 length=400
+load -e 300-test.dsk block=1 start=400 length=400
 assert 400==70
 go 401
 assert P==402
@@ -61,11 +62,13 @@ call test  25 SCRT4  027
 call test  26 ADDT1  031
 call test  27 FADRT1 032
 call test  30 FADRT2 033
-call test  31 iBETA1 035
+#Block 35 has bad data.
+;call test  31 iBETA1 035
 call test  32 iBETA2 036
 call test  33 iBETA3 037
 call test  34 iBETA4 040
-call test  35 LDAT1  041
+#Block 41 is a copy of block 42.
+;call test  35 LDAT1  041
 call test  36 STAT1  042
 call test  37 ADMT1  043
 call test  40 LAMT1  044
@@ -95,18 +98,16 @@ call test  67 DSCTST 103
 call test 700 OVFT1  104
 call test 701 ZTAT1  105
 call test 702 ZCLR1  106
-call test 703 ZCLRT2 107
-deposit INTREQ 1
-call test 704 ENIT1  110
-call test  71 MISCTS 111
+;call test  ?     ?  107
+call test  ?     ?  111
+call test  ?     ?  112
 
-;quit
 return
 
 :test
 echo *** Test: %1 - %2 ***
-load -e classic-test.linc block=%3 start=400 length=400
-assert 400==%1
+load -e 300-test.dsk block=%3 start=400 length=400
+;assert 400==%1
 deposit 21 1%3
 go 401
 assert P==34
