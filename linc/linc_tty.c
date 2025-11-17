@@ -49,7 +49,7 @@ DEVICE tty_dev = {
   NULL, NULL, NULL, NULL, NULL, NULL
 };
 
-static void tty_output(UNIT *uptr)
+void tty_output(UNIT *uptr)
 {
   uint8 ch = uptr->DATA;
   sim_debug(DBG, &tty_dev, "Character %03o '%c'\n", ch, ch & 0177);

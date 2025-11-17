@@ -81,5 +81,6 @@ extern uint16 kbd_key(uint16 wait);
 extern int kbd_struck(void);
 extern void tape_op(void);
 extern t_stat tape_metadata(FILE *, uint16 *, int16 *, int16 *);
+extern void tty_output(UNIT *uptr);
 
 #endif /* LINC_DEFS_H_ */

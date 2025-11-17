@@ -495,7 +495,7 @@ int cpu_skip(void)
 
 static void cpu_opr(void)
 {
-  switch (C03) {
+  switch (C & 077) {
   case 000: case 001: case 002: case 003: case 004: case 005: case 006: case 007:
   case 010: case 011: case 012: case 013:
     if (C & IMASK)
@@ -510,6 +510,11 @@ static void cpu_opr(void)
   case 017: //LSW
     A = LSW;
     break;
+  case 042:
+    if (MICRO_LINC) {
+      tty_dev.units[0].u3 = A;
+      tty_output(&tty_dev.units[0]);
+    }
   }
 }
 
