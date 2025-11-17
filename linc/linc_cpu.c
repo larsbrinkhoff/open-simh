@@ -310,7 +310,7 @@ cpu_misc(void)
     break;
   case 00003:
     if (MICRO_LINC)
-      ; //Proceed from Tape Pause
+      sim_debug(DBG_CPU, &cpu_dev, "Proceed from Tape Pause\n");
     break;
   case 00004:
     if (MICRO_LINC)
@@ -450,14 +450,6 @@ int cpu_skip(void)
   case 015: //KST
     flag = kbd_struck();
     break;
-  case 016:
-    if (MICRO_LINC)
-      ; // TAPE BUSY
-    break;
-  case 017:
-    if (MICRO_LINC)
-      flag = FLAG;
-    break;
   case 040: case 041: case 042: case 043: case 044: case 045: //SNS
     flag = SSW & (1 << (C & 7));
     break;
@@ -484,6 +476,13 @@ int cpu_skip(void)
     break;
   case 055: //ZZZ
     flag = (Z & 1) == 0;
+    break;
+  case 056:
+    if (MICRO_LINC)
+      sim_debug(DBG_CPU, &cpu_dev, "Skip if tape busy\n");
+  case 057:
+    if (MICRO_LINC)
+      flag = FLAG;
     break;
   default:
     flag = 0;
@@ -518,6 +517,7 @@ static void cpu_lmb(void)
 {
   if (CLASSIC_LINC)
     return;
+  sim_debug(DBG_CPU, &cpu_dev, "LMB %o\n", C & 037);
   Z = 060 | ((LP - M) >> 4);
   LP = M + 1024 * (C & 037);
 }
@@ -526,6 +526,7 @@ static void cpu_umb(void)
 {
   if (CLASSIC_LINC)
     return;
+  sim_debug(DBG_CPU, &cpu_dev, "UMB %o\n", C & 037);
   Z = 070 | ((UP - M + 1024) >> 4);
   UP = M + 1024 * (C & 037) - 1024;
 }

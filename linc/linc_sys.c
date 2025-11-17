@@ -305,8 +305,9 @@ static void fprint_skip(FILE *of, uint16 insn)
     fprintf(of, "ZZZ");
     break;
   default:
-    fprintf(of, "%04o", insn);
-    return;
+    fprintf(of, "SKP");
+    snprintf(beta, sizeof beta, "%o", insn & 017);
+    break;
   }
   if (insn & IMASK)
     fprintf(of, " i" );
