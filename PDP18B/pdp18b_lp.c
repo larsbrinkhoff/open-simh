@@ -344,6 +344,7 @@ if ((pulse & 01) && lp647_don)                          /* LPSF */
 if (pulse & 02) {                                       /* pulse 02 */
     lp647_don = 0;                                      /* clear done */
     CLR_INT (LPT);                                      /* clear int req */
+#if defined (PDP9)
     if (sb == 000) {                                    /* LPCB */
         for (i = 0; i < LP647_BSIZE; i++)
             lp647_buf[i] = 0;
@@ -352,6 +353,7 @@ if (pulse & 02) {                                       /* pulse 02 */
         if (lp647_ie)                                   /* set int */
             SET_INT (LPT);
         }
+#endif
     }
 if (pulse & 004) {                                      /* LPDI */
     switch (sb) {                                       /* case on subcode */
@@ -391,6 +393,11 @@ return dat;
 
 int32 lp647_66 (int32 dev, int32 pulse, int32 dat)
 {
+#if defined (PDP7)
+   /* 706601 LSSF - Skip if spacing flag set. */
+   /* 706602        Clear the spacing buffer. */
+   /* 706606 LSLS - Load the spacing buffer. */
+#elif defined (PDP9)
 if ((pulse & 01) && lp647_err)                          /* LPSE */
     dat = IOT_SKP | dat;
 if (pulse & 02) {                                       /* LPCF */
@@ -402,14 +409,13 @@ if (pulse & 04) {
         lp647_iot = (pulse & 060) | (dat & 07);         /* save parameters */
         sim_activate (&lp647_unit, lp647_unit.wait);    /* activate */
         }
-#if defined (PDP9)
     else {                                              /* LPEI */
         lp647_ie = 1;                                   /* set int enable */
         if (lp647_don)
             SET_INT (LPT);
         }
-#endif
     }
+#endif
 return dat;
 }
 
