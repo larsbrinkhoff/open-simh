@@ -228,7 +228,7 @@ int32 dpy07 (int32 dev, int32 pulse, int32 dat)
 
   if (TYPE34) {
     if (dat & 4)
-      dpy_i = 7 - (dat & 7);
+      dpy_i = dat & 3;
     else
       dpy_i = (dat & 3) + 4;
     sim_debug(DBG_IOT, &dpy_dev, "Set intensity to %06o\n", dpy_i);
