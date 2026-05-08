@@ -232,19 +232,23 @@ int32 dpy07 (int32 dev, int32 pulse, int32 dat)
     else
       dpy_i = (dat & 3) + 4;
     sim_debug(DBG_IOT, &dpy_dev, "Set intensity to %06o\n", dpy_i);
-    return dat;
   }
 
   if (pulse & 001) {
-    if (ty340_sense(ST340_LPHIT))
+    if (TYPE34)
+       ;
+    else if (ty340_sense(ST340_LPHIT))
       dat |= IOT_SKP;
   }
 
   if (pulse & 002) {
-    dat |= 0; // X, Y
+    if (TYPE34)
+      ;
+    else
+      dat |= 0; // X, Y
   }
 
-  if (pulse & 004) {
+  if ((pulse & 004) != 0 && !TYPE34) {
     ty340_clear(~0);
   }
 
