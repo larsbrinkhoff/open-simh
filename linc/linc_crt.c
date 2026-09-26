@@ -29,8 +29,8 @@
 #include "display/display.h"
 
 /* Function declaration. */
-static t_stat crt_svc (UNIT *uptr);
-static t_stat crt_reset (DEVICE *dptr);
+static t_stat crt_svc(UNIT *uptr);
+static t_stat crt_reset(DEVICE *dptr);
 
 static VID_DISPLAY *crt_window = NULL;
 static uint32 fade[512 * 512];
@@ -42,7 +42,7 @@ static uint32 dot[7 * 7];
 #define DBG_DOT         0002
 
 static UNIT crt_unit = {
-  UDATA (&crt_svc, UNIT_IDLE, 0)
+  UDATA(&crt_svc, UNIT_IDLE, 0)
 };
 
 static DEBTAB crt_deb[] = {
@@ -77,7 +77,7 @@ crt_svc(UNIT *uptr)
 }
 
 static t_stat
-crt_reset (DEVICE *dptr)
+crt_reset(DEVICE *dptr)
 {
   t_stat stat;
   int i, j;
@@ -126,7 +126,7 @@ crt_reset (DEVICE *dptr)
 }
 
 void
-crt_point (uint16 x, uint16 y)
+crt_point(uint16 x, uint16 y)
 {
   sim_debug(DBG, &crt_dev, "Point %o,%o\n", x, y);
   if (crt_window) {
