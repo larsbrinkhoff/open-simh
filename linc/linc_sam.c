@@ -133,6 +133,8 @@ sam_reset(DEVICE *dptr)
 
   crt_dev.reset(&crt_dev);
   stat = vid_register_gamepad_motion_callback(sam_motion);
+  if (stat == SCPE_NOATT)
+    return SCPE_OK; /* Gamepad not available. */
   if (stat != SCPE_OK && stat != SCPE_ALATT)
     return stat;
   stat = vid_register_gamepad_button_callback(sam_button);
