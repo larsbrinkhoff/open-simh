@@ -897,6 +897,8 @@ void vid_draw_window (VID_DISPLAY *vptr, int32 x, int32 y, int32 w, int32 h, uin
 SDL_Event user_event;
 SDL_Rect *vid_dst, *last;
 uint32 *vid_data;
+int wait_count = 0;
+int error;
 
 sim_debug (SIM_VID_DBG_VIDEO, vptr->vid_dev, "vid_draw(%d, %d, %d, %d)\n", x, y, w, h);
 
@@ -936,7 +938,11 @@ SDL_LockMutex (vptr->vid_draw_mutex);         /* protect vid_dst_last & vid_data
 vptr->vid_dst_last = vid_dst;
 vptr->vid_data_last = vid_data;
 SDL_UnlockMutex (vptr->vid_draw_mutex);       /* done protection */
-if (SDL_PushEvent (&user_event) < 0) {
+while ((error = SDL_PushEvent (&user_event)) == -1 && (++wait_count < 20))
+    sim_os_ms_sleep (10);
+if (wait_count > 1)
+    sim_printf ("%s: SDL_PushEvent delayed for %d ms.\n", vid_dname(vptr->vid_dev), 10 * wait_count);
+if (error < 0) {
     sim_printf ("%s: vid_draw() SDL_PushEvent error: %s\n", vid_dname(vptr->vid_dev), SDL_GetError());
     free (vid_dst);
     free (vid_data);
@@ -1046,6 +1052,8 @@ vid_set_cursor_position_window (&vid_first, x, y);
 void vid_refresh_window (VID_DISPLAY *vptr)
 {
 SDL_Event user_event;
+int wait_count = 0;
+int error;
 
 sim_debug (SIM_VID_DBG_VIDEO, vptr->vid_dev, "vid_refresh() - Queueing Refresh Event\n");
 
@@ -1055,7 +1063,11 @@ user_event.user.code = EVENT_REDRAW;
 user_event.user.data1 = NULL;
 user_event.user.data2 = NULL;
 
-if (SDL_PushEvent (&user_event) < 0)
+while ((error = SDL_PushEvent (&user_event)) == -1 && (++wait_count < 20))
+    sim_os_ms_sleep (10);
+if (wait_count > 1)
+    sim_printf ("%s: SDL_PushEvent delayed for %d ms.\n", vid_dname(vptr->vid_dev), 10 * wait_count);
+if (error < 0)
     sim_printf ("%s: vid_refresh() SDL_PushEvent error: %s\n", vid_dname(vptr->vid_dev), SDL_GetError());
 }
 
