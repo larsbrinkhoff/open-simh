@@ -34,6 +34,14 @@ static t_stat crt_reset(DEVICE *dptr);
 
 #define CRT_UNITS  2
 
+#define REFRESH_MS  50
+
+/* It's highly desirable to target 50 ms refresh, since that is how
+   long the MUS device expects to sleep to synchronize with the CPU. */
+#if REFRESH_MS != 50
+#error CRT sleep time is incompatible with MUS sleep time.
+#endif
+
 static VID_DISPLAY *crt_window[CRT_UNITS] = { NULL, NULL };
 static uint32 fade[CRT_UNITS][512 * 512];
 static uint32 dot[CRT_UNITS][7 * 7];
@@ -111,7 +119,7 @@ crt_svc(UNIT *uptr)
   while (vid_poll_kb(&ev) == SCPE_OK)
     kbd_event(&ev);
 
-  sim_activate_after(uptr, 50000);
+  sim_activate_after(uptr, REFRESH_MS * 1000);
   return crt_svc_stat;
 }
 

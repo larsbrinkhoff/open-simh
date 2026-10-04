@@ -260,6 +260,7 @@ cpu_misc(void)
 {
   switch (C) {
   case 00000: //HLT
+    mus_chime();
     stop_reason = STOP_HALT;
     break;
   case 00002: //PDP
@@ -882,6 +883,7 @@ static void cpu_interrupt(void)
 t_stat sim_instr(void)
 {
   t_stat stat;
+  int32 cycles;
 
   if ((stat = build_dev_tab()) != SCPE_OK)
     return stat;
@@ -917,10 +919,15 @@ t_stat sim_instr(void)
         return SCPE_STEP;
     }
 
+    cycles = sim_interval;
+
     if (paused)
       sim_interval--;
     else
       cpu_insn();
+
+    for (cycles -= sim_interval; cycles > 0; cycles -= 16)
+      mus_sample(A, S, Z, cycles > 16 ? 16 : cycles);
 
     cpu_interrupt();
 

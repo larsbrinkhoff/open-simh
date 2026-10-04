@@ -11,6 +11,7 @@ This is an emulator for the classic LINC from 1965.
 - SAM - sampled analog inputs.
 - TAPE - four tape drives.
 - TTY - teletype.
+- MUS - speaker.
 
 ### LOAD
 
@@ -118,6 +119,22 @@ Options for the CRT units:
 
 The defaults for CRT0 are `ORANGE` and `CH0`.  The CRT1 defaults are
 `DISABLED`, `GREEN`, and `CH1`.
+
+### Music
+
+The MUS device samples a bit inside the machine state and plays it on
+a speaker.  The LINC audio switch can be placed in the positions Z25-Z
+(for S10), V2-V (unknown), and V4-H (for Z0).  Available music
+software uses Z0 for output.
+
+Type `ATTACH MUS <device>` to select some particular audio device, or
+else the default device will be used.  Type `SHOW MUS DEVICES` to see
+a list of available devices.
+
+Options for the MUS device:
+- `Z0` - sample Z bit 0 (the most significant bit); this is the default.
+- `S10` - sample S bit 10.
+- `A0` - sample A bit 0; this is for compatability with the LINC-8 and PDP-12.
 
 ### CPU
 

@@ -32,6 +32,10 @@
 #include "sim_defs.h"
 #include "sim_video.h"
 
+#ifdef HAVE_LIBSDL
+#define LINC_USE_AUDIO  1
+#endif
+
 #define STOP_HALT       1
 #define STOP_IBKPT      2
 #define STOP_RBKPT      3
@@ -60,6 +64,9 @@ extern DEVICE cpu_dev;
 extern DEVICE crt_dev;
 extern DEVICE dpy_dev;
 extern DEVICE kbd_dev;
+#ifdef LINC_USE_AUDIO
+extern DEVICE mus_dev;
+#endif
 extern DEVICE sam_dev;
 extern DEVICE tape_dev;
 extern DEVICE tty_dev;
@@ -74,5 +81,10 @@ extern uint16 kbd_key(uint16 wait);
 extern int kbd_struck(void);
 extern void tape_op(void);
 extern t_stat tape_metadata(FILE *, uint16 *, int16 *, int16 *);
+
+#ifdef LINC_USE_AUDIO
+extern void mus_sample(uint16 A, uint16 S, uint16 Z, int32 cycles);
+extern void mus_chime(void);
+#endif
 
 #endif /* LINC_DEFS_H_ */
