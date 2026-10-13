@@ -53,7 +53,8 @@
 #define UMASK  00010  /* Tape unit bit. */
 #define BMASK  00017  /* Beta; index register. */
 
-#define MEMSIZE  2048
+#define MAXMEM  32768
+extern uint16 memsize;
 
 /* The CRT device refresh rate in milliseconds.  The MUS device has to
    know this to throttle the CPU cycle rate in a way that doesn't
