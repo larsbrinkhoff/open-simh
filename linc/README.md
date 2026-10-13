@@ -146,6 +146,8 @@ Options for the MUS device:
 
 ### CPU
 
+Memory can be set to `1K`, `2K`, `4K`, `8K`, `16K`, or `16K`.
+
 Registers:
 - P - Instruction location, 10 bits.
 - C - Current instruction, 12 bits.
