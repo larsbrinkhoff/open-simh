@@ -31,7 +31,8 @@
 int32 sim_emax = 1;
 char sim_name[] = "LINC";
 
-uint16 M[MEMSIZE];
+uint16 M[MAXMEM];
+uint16 memsize = 2048;
 REG *sim_PC = &cpu_reg[0];
 
 DEVICE *sim_devices[] = {
@@ -106,7 +107,7 @@ t_stat
 sim_load(FILE *fileref, CONST char *cptr, CONST char *fnam, int flag)
 {
   t_stat (*get_word)(FILE *fileref, uint16 *x) = get_binary_word;
-  t_addr addr, length = MEMSIZE, start = 0, end;
+  t_addr addr, length = memsize, start = 0, end;
   int16 forward_offset = 0, reverse_offset;
   uint16 block_size;
   long offset = 0;
@@ -139,8 +140,8 @@ sim_load(FILE *fileref, CONST char *cptr, CONST char *fnam, int flag)
   }
 
   end = start + length;
-  if (end > MEMSIZE)
-    end = MEMSIZE;
+  if (end > memsize)
+    end = memsize;
 
   sim_fseek(fileref, offset, SEEK_SET);
 
