@@ -7583,7 +7583,10 @@ memset (&del_state, 0, sizeof (del_state));
 stat = sim_dir_scan (cptr, sim_delete_entry, &del_state);
 if (stat == SCPE_OK)
     return del_state.stat;
-return sim_messagef (SCPE_OK, "No such file or directory: %s\n", cptr);
+if (sim_switches & SWMASK ('N'))
+    return SCPE_OK;
+else
+    return sim_messagef (SCPE_OK, "No such file or directory: %s\n", cptr);
 }
 
 typedef struct {
