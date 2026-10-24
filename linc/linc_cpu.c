@@ -304,7 +304,7 @@ cpu_misc(void)
 {
   switch (C) {
   case 00000: //HLT
-    mus_chime();
+    gong_chime();
     stop_reason = STOP_HALT;
     break;
   case 00001: //??? unknown

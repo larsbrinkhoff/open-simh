@@ -77,6 +77,7 @@ extern t_stat crt_svc_stat;
 extern DEVICE cpu_dev;
 extern DEVICE crt_dev;
 extern DEVICE dpy_dev;
+extern DEVICE gong_dev;
 extern DEVICE kbd_dev;
 #ifdef LINC_USE_AUDIO
 extern DEVICE mus_dev;
@@ -97,6 +98,7 @@ extern int kbd_struck(void);
 extern void tape_op(void);
 extern t_stat tape_metadata(FILE *, uint16 *, int16 *, int16 *);
 extern void tty_output(UNIT *uptr);
+extern void gong_chime(void);
 
 #ifdef LINC_USE_AUDIO
 extern void mus_sample(uint16 A, uint16 S, uint16 Z, int32 cycles);
