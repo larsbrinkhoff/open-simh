@@ -12,6 +12,7 @@ This is an emulator for the classic LINC from 1965.
 - TAPE - four tape drives.
 - TTY - teletype.
 - MUS - speaker.
+- GONG - sound a chime.
 
 ### LOAD
 
