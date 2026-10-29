@@ -26,16 +26,22 @@
 
 #include "linc_defs.h"
 #include "sim_video.h"
+#include "linc_subprocess.h"
 
 /* Function declaration. */
 static t_stat sam_svc(UNIT *uptr);
 static t_stat sam_reset(DEVICE *dptr);
+static t_stat sam_attach(UNIT *uptr, CONST char *cptr);
+static t_stat sam_detach(UNIT *uptr);
+static uint16 ones_complement(int value);
 
 /* Debug */
 #define DBG             0001
 
 #define SSW (*(uint16 *)cpu_reg[11].loc)
 #define SAM ((uint16 *)cpu_reg[19].loc)
+
+static SIM_SUBPROCESS *sam_proc = NULL;
 
 static UNIT sam_unit = {
   UDATA(&sam_svc, UNIT_IDLE, 0)
@@ -50,20 +56,70 @@ DEVICE sam_dev = {
   "SAM", &sam_unit, NULL, NULL,
   1, 8, 12, 1, 8, 12,
   NULL, NULL, &sam_reset,
-  NULL, NULL, NULL,
+  NULL, &sam_attach, &sam_detach,
   NULL, DEV_DISABLE | DEV_DEBUG, 0, sam_deb,
   NULL, NULL, NULL, NULL, NULL, NULL
 };
 
+static void mixer_controller(uint8 port, int value)
+{
+  value &= ~0x7F;
+  value >>= 6;
+  value -= 127;
+  SAM[port] = ones_complement(value);
+  sim_debug(DBG, &sam_dev, "SAM %d set to %04o (%d)\n", port, SAM[port], value);
+}
+
 static t_stat
 sam_svc(UNIT *uptr)
 {
+  uint8 data[3];
+  uint8 *p;
+  uint16 value;
+  size_t n;
+  t_stat stat;
+  int m;
+
+  if (sam_proc == NULL)
+    return SCPE_OK;
+
+  sim_activate_after(uptr, 10000);
+
+  do {
+    n = 1;
+    stat = sim_subprocess_read(sam_proc, data, &n);
+    if (stat != SCPE_OK) {
+      sim_messagef(stat, "Error reading from SAM subprocess");
+      return SCPE_OK;
+    }
+    if (n == 0)
+      return SCPE_OK;
+  } while ((data[0] & 0x80) == 0);
+
+  for (p = data + 1, m = 2; m > 0; p += n, m -= n) {
+    n = m;
+    stat = sim_subprocess_read(sam_proc, p, &n);
+    if (stat != SCPE_OK) {
+      sim_messagef(stat, "Error reading from SAM subprocess");
+      return SCPE_OK;
+    }
+  }
+
+  if ((data[1] & 0x80) != 0 || (data[2] & 0x80) != 0) {
+    sim_messagef(stat, "Error reading from SAM subprocess");
+    return SCPE_OK;
+  }
+
+  data[0] &= 0x7F;
+  value = (data[1] << 7) | data[2];
+  sim_debug(DBG, &sam_dev, "Mixer controller %u, value %u\n", data[0], value);
+  mixer_controller(data[0], value);
+
   return SCPE_OK;
 }
 
 static uint16 ones_complement(int value)
 {
-  value /= 258;
   if (value < 0)
     return (uint16)(-value & 07777) ^ 07777;
   else
@@ -74,6 +130,7 @@ static void sam_motion(int which, int axis, int value)
 {
   sim_debug(DBG, &sam_dev, "Motion %d, axis %d, value %d\n",
             which, axis, value);
+  value /= 258;
   switch (which) {
   case 0:
     switch (axis) {
@@ -142,4 +199,38 @@ sam_reset(DEVICE *dptr)
     return stat;
   sim_activate(&sam_unit, 1);
   return SCPE_OK;
+}
+
+static t_stat sam_attach(UNIT *uptr, CONST char *cptr)
+{
+  t_stat stat;
+
+  if ((uptr->flags & UNIT_ATT) != 0)
+    return SCPE_ALATT;
+
+  sam_detach(uptr);
+
+  uptr->filename = (char *)calloc(CBUFSIZE, sizeof(char));
+  if (uptr->filename == NULL)
+    return SCPE_MEM;
+
+  stat = sim_subprocess_start(&sam_proc, cptr);
+  if (stat != SCPE_OK) {
+    free(uptr->filename);
+    return stat;
+  }
+
+  strlcpy(uptr->filename, cptr, CBUFSIZE);
+  uptr->flags |= UNIT_ATT;
+  return SCPE_OK;
+}
+
+static t_stat sam_detach(UNIT *uptr)
+{
+  if ((uptr->flags & UNIT_ATT) == 0)
+    return SCPE_NOATT;
+
+  free(uptr->filename);
+  uptr->flags &= ~UNIT_ATT;
+  return sim_subprocess_stop(sam_proc);
 }
