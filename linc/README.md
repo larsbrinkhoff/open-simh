@@ -128,6 +128,19 @@ The defaults for CRT0 are `ORANGE` and `CH0`.  The CRT1 defaults are
 For scripted interactions, `SET DPY TEXT` to convert characters on the
 scope to ASCII text.
 
+### Sampled analog inputs
+
+There are 16 sampled analog inputs.  The analog input is converted to
+an 8-bit one's complement value, i.e. ±127 decimal.  If USB gamepads
+are available, they will map to inputs suitable for the Spacewar game.
+
+A subprocess can be attached to the SAM device.  The attach argument
+is a program to run.  The program must write three-byte MIDI messages
+to stdout.  Controller numbers 16, 17, 20, 21, 54, 55, 58, and 59 map
+to SAM ports 0, 1, 2, 3, 4, 5, 6, and 7.  LAP6 uses port 7 for the
+number of lines to display, and Spacewar uses port 0-1 for player one
+and 6-7 for player two.
+
 ### Music
 
 The MUS device samples a bit inside the machine state and plays it on
