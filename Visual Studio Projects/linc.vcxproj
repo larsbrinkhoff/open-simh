@@ -144,6 +144,7 @@
     <ClCompile Include="..\linc\linc_tape.c" />
     <ClCompile Include="..\linc\linc_tty.c" />
     <ClCompile Include="..\linc\linc_mus.c" />
+    <ClCompile Include="..\linc\linc_panel.c" />
     <ClCompile Include="..\scp.c" />
     <ClCompile Include="..\sim_console.c" />
     <ClCompile Include="..\sim_disk.c" />
@@ -160,6 +161,7 @@
     <ClInclude Include="..\display\display.h" />
     <ClInclude Include="..\display\ws.h" />
     <ClInclude Include="..\linc\linc_defs.h" />
+    <ClInclude Include="..\linc\linc_panel.h" />
     <ClInclude Include="..\scp.h" />
     <ClInclude Include="..\sim_console.h" />
     <ClInclude Include="..\sim_defs.h" />

@@ -36,10 +36,13 @@
 #define LINC_USE_AUDIO  1
 #endif
 
-#define STOP_HALT       1
-#define STOP_IBKPT      2
-#define STOP_RBKPT      3
-#define STOP_WBKPT      4
+#define STOP_STOP       1
+#define STOP_HALT       2
+#define STOP_STEP       3
+#define STOP_EXAM       4
+#define STOP_IBKPT      5
+#define STOP_RBKPT      6
+#define STOP_WBKPT      7
 
 #define WMASK  07777  /* Full word. */
 #define HMASK  04000  /* H bit; half word select. */
@@ -52,6 +55,8 @@
 #define IMASK  00020  /* Index bit. */
 #define UMASK  00010  /* Tape unit bit. */
 #define BMASK  00017  /* Beta; index register. */
+
+extern t_stat stop_reason;
 
 #define MAXMEM  32768
 extern uint16 memsize;
@@ -82,6 +87,7 @@ extern DEVICE kbd_dev;
 #ifdef LINC_USE_AUDIO
 extern DEVICE mus_dev;
 #endif
+extern DEVICE panel_dev;
 extern DEVICE sam_dev;
 extern DEVICE tape_dev;
 extern DEVICE tty_dev;
@@ -99,6 +105,9 @@ extern void tape_op(void);
 extern t_stat tape_metadata(FILE *, uint16 *, int16 *, int16 *);
 extern void gong_chime(void);
 extern void tty_output(UNIT *uptr);
+extern void panel_send(uint8 item, uint16 value);
+extern void panel_flush(void);
+extern void cpu_update_panel(void);
 
 #ifdef LINC_USE_AUDIO
 extern void mus_sample(uint16 A, uint16 S, uint16 Z, int32 cycles);

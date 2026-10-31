@@ -234,6 +234,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\linc\linc_panel.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\windows-build\pthreads\pthread.c"
 				>
 				<FileConfiguration
@@ -315,6 +319,10 @@
 			</File>
 			<File
 				RelativePath="..\linc\linc_defs.h"
+				>
+			</File>
+			<File
+				RelativePath="..\linc\linc_panel.h"
 				>
 			</File>
 			<File

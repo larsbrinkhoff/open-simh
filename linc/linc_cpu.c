@@ -25,6 +25,7 @@
 */
 
 #include "linc_defs.h"
+#include "linc_panel.h"
 
 
 /* Debug */
@@ -80,7 +81,7 @@ static int PINFF;
 static int DO = 0;
 
 static int32 cycles;
-static t_stat stop_reason;
+t_stat stop_reason;
 
 typedef struct {
   uint16 P;
@@ -180,31 +181,37 @@ static CTAB linc_cmd[] = {
 static void cpu_set_P(uint16 x)
 {
   P = X(x);
+  panel_send(PANEL_INSTRUCTION_LOCATION, P);
 }
 
 static void cpu_set_C(uint16 x)
 {
   C = x & WMASK;
+  panel_send(PANEL_INSTRUCTION, C);
 }
 
 static void cpu_set_S(uint16 addr)
 {
   S = addr & WMASK;
+  panel_send(PANEL_MEMORY_ADDRESS, S);
 }
 
 static void cpu_set_B(uint16 data)
 {
   B = data & WMASK;
+  panel_send(PANEL_MEMORY_CONTENTS, B);
 }
 
 static void cpu_set_A(uint16 x)
 {
   A = x & WMASK;
+  panel_send(PANEL_ACCUMULATOR, A);
 }
 
 static void cpu_set_L(uint16 x)
 {
   L = x & 1;
+  panel_send(PANEL_LINK, L);
 }
 
 static void cpu_set_L_A(uint16 x)
@@ -351,6 +358,7 @@ cpu_misc(void)
   case 00000: //HLT
     gong_chime();
     stop_reason = STOP_HALT;
+    panel_send(PANEL_AUTO_RESTART, 0);
     break;
   case 00001: //??? unknown
     if (MICRO_LINC)
@@ -801,13 +809,16 @@ cpu_insn(void)
     history[history_i].P = P;
 
   /* Cycle 0, or I. */
+  panel_send(PANEL_CYCLE, PANEL_CYCLE_I);
   cpu_fetch();
   if (!DO)
     cpu_set_C(B);
 
   /* Cycle 1, or X. */
-  if ((C & 07000) == 01000)
+  if ((C & 07000) == 01000) {
+    panel_send(PANEL_CYCLE, PANEL_CYCLE_X);
     cpu_indexing();
+  }
 
   if (history) {
     history[history_i].C = C;
@@ -815,8 +826,10 @@ cpu_insn(void)
   }
 
   /* Cycle 2, or O. */
+  panel_send(PANEL_CYCLE, PANEL_CYCLE_O);
 
   /* Cycle 3, or E. */
+  panel_send(PANEL_CYCLE, PANEL_CYCLE_E);
   switch (C & 07740) {
   case 00000:
     cpu_misc();
@@ -943,6 +956,7 @@ t_stat cpu_do(void)
      sim_poll_kbd.  Without this, the call will hang. */
   sim_ttrun();
 
+  panel_send(PANEL_RUN_PAUSE, PANEL_RUNNING);
   DO = 1;
   cpu_set_C(LSW);
   cpu_set_B(RSW);
@@ -953,13 +967,17 @@ t_stat cpu_do(void)
   /* Can not return from DO until the instruction is done,
      i.e. not paused. */
   while (paused) {
+    panel_send(PANEL_RUN_PAUSE, PANEL_PAUSED);
     AIO_CHECK_EVENT;
     if (sim_interval <= 0) {
-      if ((stat = sim_process_event()) != SCPE_OK)
+      if ((stat = sim_process_event()) != SCPE_OK) {
+        panel_send(PANEL_RUN_PAUSE, PANEL_STOPPED);
         return stat;
+      }
     }
     sim_interval--;
   }
+  panel_send(PANEL_RUN_PAUSE, PANEL_STOPPED);
   return SCPE_OK;
 }
 
@@ -988,6 +1006,7 @@ static void cpu_interrupt(void)
   }
 
   if (paused) {
+    panel_send(PANEL_RUN_PAUSE, PANEL_PAUSED);
     if (!mtp_or_opr()) {
       sim_debug(DBG_INT, &cpu_dev, "Pause only interrupted for MTP or OPR.\n");
       return;
@@ -997,6 +1016,7 @@ static void cpu_interrupt(void)
     sim_debug(DBG_INT, &cpu_dev, "Pause interrupted.\n");
     PINFF = 1;
     paused = 0;
+    panel_send(PANEL_RUN_PAUSE, PANEL_RUNNING);
   }
 
   sim_debug(DBG_INT, &cpu_dev, "Interrupt taken.\n");
@@ -1030,6 +1050,51 @@ static void cpu_interrupt(void)
   }
 }
 
+/* Update the panel in between SIMH commands and before running. */
+void cpu_update_panel(void)
+{
+  panel_send(PANEL_INSTRUCTION,          C);
+  panel_send(PANEL_RELAYS,               R);
+  panel_send(PANEL_INSTRUCTION_LOCATION, P);
+  panel_send(PANEL_SENSE_SWITCHES,       SSW);
+  panel_send(PANEL_LINK,                 L);
+  panel_send(PANEL_ACCUMULATOR,          A);
+  panel_send(PANEL_MEMORY_ADDRESS,       S);
+  panel_send(PANEL_MEMORY_CONTENTS,      B);
+  panel_send(PANEL_LEFT_SWITCHES,        LSW);
+  panel_send(PANEL_RIGHT_SWITCHES,       RSW);
+  panel_send(PANEL_GONG_ON_OFF, !(gong_dev.flags & DEV_DIS));
+  panel_send(PANEL_SPEAKER_SELECT, (mus_dev.units[0].flags >> UNIT_V_UF) & 3);
+  panel_send(PANEL_SCOPE_KNOB_0,         SAM[0]);
+  panel_send(PANEL_SCOPE_KNOB_1,         SAM[1]);
+  panel_send(PANEL_SCOPE_KNOB_2,         SAM[2]);
+  panel_send(PANEL_SCOPE_KNOB_3,         SAM[3]);
+  panel_send(PANEL_SCOPE_KNOB_4,         SAM[4]);
+  panel_send(PANEL_SCOPE_KNOB_5,         SAM[5]);
+  panel_send(PANEL_SCOPE_KNOB_6,         SAM[6]);
+  panel_send(PANEL_SCOPE_KNOB_7,         SAM[7]);
+  panel_flush();
+}
+
+void cpu_reset_panel(void)
+{
+  cpu_update_panel();
+  panel_send(PANEL_ON_OFF,               1);
+  panel_send(PANEL_RUN_PAUSE,            PANEL_STOPPED);
+  panel_send(PANEL_CYCLE,                0);
+  panel_send(PANEL_AUTO_RESTART,         0);
+  panel_send(PANEL_ISTOP,                0);
+  panel_send(PANEL_XOESTOP,              0);
+  panel_send(PANEL_CLEAR,                0);
+  panel_send(PANEL_MARK,                 0);
+  panel_send(PANEL_FILL_STEP,            0);
+  panel_send(PANEL_STEP_EXAM,            0);
+  panel_send(PANEL_CYCLE_BY_CYCLE,       0);
+  panel_send(PANEL_INSTR_BY_INSTR,       0);
+  panel_send(PANEL_LEFT_SWITCHES,        0);
+  panel_send(PANEL_RIGHT_SWITCHES,       0);
+}
+
 t_stat sim_instr(void)
 {
   t_stat stat;
@@ -1051,6 +1116,9 @@ t_stat sim_instr(void)
   PINFF = 0;
   ENI = 0;
 
+  cpu_update_panel();
+  panel_send(PANEL_RUN_PAUSE, PANEL_RUNNING);
+
   for (;;) {
     AIO_CHECK_EVENT;
     if (sim_interval <= 0) {
@@ -1058,30 +1126,39 @@ t_stat sim_instr(void)
         return stat;
     }
 
-    if (sim_brk_summ && sim_brk_test(P, SWMASK('E')))
+    if (sim_brk_summ && sim_brk_test(P, SWMASK('E'))) {
+      panel_send(PANEL_RUN_PAUSE, PANEL_STOPPED);
       return STOP_IBKPT;
+    }
 
     /* Can not return from a STEP until the instruction is done,
        i.e. not paused. */
     if (!paused && sim_step != 0) {
-      if (--sim_step == 0)
+      if (--sim_step == 0) {
+        panel_send(PANEL_RUN_PAUSE, PANEL_STOPPED);
         return SCPE_STEP;
+      }
     }
 
     cycles = sim_interval;
 
-    if (paused)
+    if (paused) {
+      panel_send(PANEL_RUN_PAUSE, PANEL_PAUSED);
       sim_interval--;
-    else
+    } else {
+      panel_send(PANEL_RUN_PAUSE, PANEL_RUNNING);
       cpu_insn();
+    }
 
     for (cycles -= sim_interval; cycles > 0; cycles -= 16)
       mus_sample(A, S, Z, cycles > 16 ? 16 : cycles);
 
     cpu_interrupt();
 
-    if (stop_reason)
+    if (stop_reason) {
+      panel_send(PANEL_RUN_PAUSE, PANEL_STOPPED);
       return stop_reason;
+    }
   }
 
   return SCPE_OK;
@@ -1195,6 +1272,9 @@ cpu_show_hist(FILE *st, UNIT *uptr, int32 val, CONST void *desc)
 static t_stat
 cpu_reset(DEVICE *dptr)
 {
+  if (sim_switches & SWMASK('P'))
+    cpu_reset_panel();
+
   sim_brk_types = SWMASK('E') | SWMASK('R') | SWMASK('W');
   sim_brk_dflt = SWMASK('E');
   sim_vm_cmd = linc_cmd;

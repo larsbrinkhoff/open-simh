@@ -27,6 +27,7 @@
 #include "linc_defs.h"
 #include "sim_video.h"
 #include "linc_subprocess.h"
+#include "linc_panel.h"
 
 /* Function declaration. */
 static t_stat sam_svc(UNIT *uptr);
@@ -67,6 +68,8 @@ static void mixer_controller(uint8 port, int value)
   value >>= 6;
   value -= 127;
   SAM[port] = ones_complement(value);
+  if (port < 8)
+    panel_send(PANEL_SCOPE_KNOB_0 + port, SAM[port]);
   sim_debug(DBG, &sam_dev, "SAM %d set to %04o (%d)\n", port, SAM[port], value);
 }
 
@@ -134,25 +137,29 @@ static void sam_motion(int which, int axis, int value)
 {
   sim_debug(DBG, &sam_dev, "Motion %d, axis %d, value %d\n",
             which, axis, value);
-  value /= 258;
+  value /= 257;
   switch (which) {
   case 0:
     switch (axis) {
     case 0:
-      SAM[0] = ones_complement(value);
+      panel_send(PANEL_SCOPE_KNOB_0,
+                 SAM[0] = ones_complement(value));
       break;
     case 1:
-      SAM[1] = ones_complement(-value);
+      panel_send(PANEL_SCOPE_KNOB_1,
+                 SAM[1] = ones_complement(-value));
       break;
     }
     break;
   case 1:
     switch (axis) {
     case 0:
-      SAM[6] = ones_complement(value);
+      panel_send(PANEL_SCOPE_KNOB_6,
+                 SAM[6] = ones_complement(value));
       break;
     case 1:
-      SAM[7] = ones_complement(-value);
+      panel_send(PANEL_SCOPE_KNOB_7,
+                 SAM[7] = ones_complement(-value));
       break;
     }
     break;
