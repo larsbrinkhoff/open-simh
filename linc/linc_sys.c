@@ -42,6 +42,7 @@ DEVICE *sim_devices[] = {
   &gong_dev,
   &kbd_dev,
   &mus_dev,
+  &panel_dev,
   &sam_dev,
   &tape_dev,
   &tty_dev,
@@ -50,7 +51,10 @@ DEVICE *sim_devices[] = {
   
 const char *sim_stop_messages[SCPE_BASE] = {
   "Unknown error",
-  "HALT instruction",
+  "Stopped",
+  "HLT instruction",
+  "Step",
+  "Examine",
   "Breakpoint",
   "Read Breakpoint",
   "Write Breakpoint"
