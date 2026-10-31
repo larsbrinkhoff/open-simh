@@ -42,6 +42,7 @@ DEVICE *sim_devices[] = {
   &gong_dev,
   &kbd_dev,
   &mus_dev,
+  &panel_dev,
   &sam_dev,
   &tape_dev,
   &tty_dev,

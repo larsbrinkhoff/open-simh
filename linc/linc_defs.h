@@ -82,6 +82,7 @@ extern DEVICE kbd_dev;
 #ifdef LINC_USE_AUDIO
 extern DEVICE mus_dev;
 #endif
+extern DEVICE panel_dev;
 extern DEVICE sam_dev;
 extern DEVICE tape_dev;
 extern DEVICE tty_dev;
@@ -99,6 +100,7 @@ extern void tape_op(void);
 extern t_stat tape_metadata(FILE *, uint16 *, int16 *, int16 *);
 extern void gong_chime(void);
 extern void tty_output(UNIT *uptr);
+extern void panel_send(uint8 item, uint16 value);
 
 #ifdef LINC_USE_AUDIO
 extern void mus_sample(uint16 A, uint16 S, uint16 Z, int32 cycles);
