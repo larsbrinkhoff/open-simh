@@ -120,10 +120,14 @@ sam_svc(UNIT *uptr)
 
 static uint16 ones_complement(int value)
 {
+  uint16 x;
   if (value < 0)
-    return (uint16)(-value & 07777) ^ 07777;
+    x = (-value & WMASK) ^ WMASK;
   else
-    return (uint16)(value & 07777);
+    x = value & WMASK;
+  if (x & 0200)
+    x |= 07400;
+  return x;
 }
 
 static void sam_motion(int which, int axis, int value)

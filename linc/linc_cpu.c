@@ -177,15 +177,14 @@ static CTAB linc_cmd[] = {
   { NULL }
 };
 
-static void cpu_ndxp(int flag)
+static void cpu_set_P(uint16 x)
 {
-  if (flag)
-    P = X(P + 1);
+  P = X(x);
 }
 
-static void cpu_ndxc(void)
+static void cpu_set_C(uint16 x)
 {
-  C = (C & ~BMASK) | ((C + 1) & BMASK);
+  C = x & WMASK;
 }
 
 static void cpu_set_S(uint16 addr)
@@ -198,6 +197,48 @@ static void cpu_set_B(uint16 data)
   B = data & WMASK;
 }
 
+static void cpu_set_A(uint16 x)
+{
+  A = x & WMASK;
+}
+
+static void cpu_set_L(uint16 x)
+{
+  L = x & 1;
+}
+
+static void cpu_set_L_A(uint16 x)
+{
+  cpu_set_L(x >> 12);
+  cpu_set_A(x);
+}
+
+static void cpu_set_Z(uint16 x)
+{
+  Z = x & WMASK;
+}
+
+static void cpu_shift_into_Z(void)
+{
+  cpu_set_Z((A << 11) | (Z >> 1));
+}
+
+static void cpu_set_R(uint16 x)
+{
+  R = x & RMASK;
+}
+
+static void cpu_ndxp(int flag)
+{
+  if (flag)
+    cpu_set_P(P + 1);
+}
+
+static void cpu_ndxc(void)
+{
+  cpu_set_C((C & ~BMASK) | ((C + 1) & BMASK));
+}
+
 static void cpu_4ndxb()
 {
   cpu_set_B(B + 4);
@@ -205,7 +246,7 @@ static void cpu_4ndxb()
 
 static void cpu_4ndxa()
 {
-  A = (A + 4) & WMASK;
+  cpu_set_A(A + 4);
 }
 
 static void cpu_mem_read(void)
@@ -327,10 +368,10 @@ cpu_misc(void)
     break;
   case 00004:
     if (MICRO_LINC)
-      A = TA;
+      cpu_set_A(TA);
     break;
   case 00005: //ZTA
-    A = Z >> 1;
+    cpu_set_A(Z >> 1);
     break;
   case 00007:
     if (MICRO_LINC) {
@@ -343,7 +384,9 @@ cpu_misc(void)
     ENI = 1;
     break;
   case 00011: //CLR
-    A = L = Z = 0;
+    cpu_set_A(0);
+    cpu_set_L(0);
+    cpu_set_Z(0);
     break;
   case 00012:
     if (CLASSIC_LINC) {
@@ -355,15 +398,15 @@ cpu_misc(void)
   case 00013: //Write gate on.
     break;
   case 00014: //ATR
-    R = A & RMASK;
+    cpu_set_R(A);
     break;
   case 00015: //RTA
-    A = R & RMASK;
+    cpu_set_A(R);
     break;
   case 00016: //NOP
     break;
   case 00017: //COM
-    A = (~A) & WMASK;
+    cpu_set_A(~A);
     break;
   }
 }
@@ -386,9 +429,7 @@ static void cpu_sam(void)
   // i=0 wait 24 microseconds, i=1 do not wait
   if ((C & IMASK) == 0)
     sim_interval -= 3;
-  A = SAM[C03];
-  if (A & 0200) /* One's complement +/-177. */
-    A |= 07400;
+  cpu_set_A(SAM[C03]);
 }
 
 static void cpu_dis(void)
@@ -410,31 +451,26 @@ static void cpu_xsk(void)
 
 static void cpu_rol(void)
 {
-  C = (C & ~BMASK) | (~B & BMASK);
+  cpu_set_C((C & ~BMASK) | (~B & BMASK));
   while (C03 != 017) {
     if (C & IMASK) {
-      A = (A << 1) | L;
-      L = A >> 12;
+      cpu_set_L_A((A << 1) | L);
     } else {
-      A = (A << 1) | (A >> 11);
+      cpu_set_A((A << 1) | (A >> 11));
     }
-    A &= WMASK;
     cpu_ndxc();
   }
 }
 
 static void cpu_ror(void)
 {
-  C = (C & ~BMASK) | (~B & BMASK);
+  cpu_set_C((C & ~BMASK) | (~B & BMASK));
   while (C03 != 017) {
-    Z = (Z >> 1) | ((A & 1) << 11);
+    cpu_shift_into_Z();
     if (C & IMASK) {
-      A |= L << 12;
-      L = A & 1;
-      A = A >> 1;
+      cpu_set_L_A((A << 12) | (A >> 1) | (L << 11));
     } else {
-      A = (A >> 1) | (A << 11);
-      A &= WMASK;
+      cpu_set_A((A >> 1) | (A << 11));
     }
     cpu_ndxc();
     if ((C & 3) == 0) {
@@ -447,12 +483,12 @@ static void cpu_ror(void)
 
 static void cpu_scr(void)
 {
-  C = (C & ~BMASK) | (~B & BMASK);
+  cpu_set_C((C & ~BMASK) | (~B & BMASK));
   while (C03 != 017) {
-    Z = (Z >> 1) | ((A & 1) << 11);
+    cpu_shift_into_Z();
     if (C & IMASK)
-      L = A & 1;
-    A = (A & 04000) | (A >> 1);
+      cpu_set_L(A);
+    cpu_set_A((A & 04000) | (A >> 1));
     cpu_ndxc();
     if ((C & 3) == 0) {
       mus_sample(A, S, Z, 1);
@@ -535,13 +571,13 @@ static void cpu_opr(void)
       ; //Pause.
     break;
   case 015: case 035: //KBD
-    A = kbd_key(C & IMASK);
+    cpu_set_A(kbd_key(C & IMASK));
     break;
   case 016: case 036: //RSW
-    A = RSW;
+    cpu_set_A(RSW);
     break;
   case 017: case 037: //LSW
-    A = LSW;
+    cpu_set_A(LSW);
     break;
   case 042:
     if (MICRO_LINC) {
@@ -556,7 +592,7 @@ static void cpu_lmb(void)
   if (CLASSIC_LINC)
     return;
   sim_debug(DBG_CPU, &cpu_dev, "LMB %o\n", C & 037);
-  Z = 060 | ((LP - M) >> 4);
+  cpu_set_Z(060 | ((LP - M) >> 4));
   LMB_SETUP = C & 037;
 }
 
@@ -565,7 +601,7 @@ static void cpu_umb(void)
   if (CLASSIC_LINC)
     return;
   sim_debug(DBG_CPU, &cpu_dev, "UMB %o\n", C & 037);
-  Z = 070 | ((UP - M + 1024) >> 4);
+  cpu_set_Z(070 | ((UP - M + 1024) >> 4));
   UP = M + 1024 * (C & 037) - 1024;
 }
 
@@ -578,7 +614,7 @@ static void cpu_tape(void)
 static void cpu_lda(void)
 {
   cpu_mem_read();
-  A = B;
+  cpu_set_A(B);
 }
 
 static void cpu_sta(void)
@@ -589,13 +625,17 @@ static void cpu_sta(void)
     cpu_mem_write();
 }
 
+static uint16 ones_complement_sum(uint16 x, uint16 y)
+{
+  uint16 sum = x + y;
+  return (sum + (sum >> 12)) & WMASK;
+}
+
 static void cpu_ada(void)
 {
   cpu_mem_read();
   OVF = ~(A ^ B);
-  A += B;
-  A += A >> 12;
-  A &= WMASK;
+  cpu_set_A(ones_complement_sum(A, B));
   OVF &= (A ^ B) & 04000;
 }
 
@@ -609,13 +649,7 @@ static void cpu_adm(void)
 static void cpu_lam(void)
 {
   cpu_mem_read();
-  A += L;
-  L = A >> 12;
-  A &= WMASK;
-  A += B;
-  if (A & 010000)
-    L = 1;
-  A &= WMASK;
+  cpu_set_L_A(A + B + L);
   cpu_set_B(A);
   cpu_mem_modify();
 }
@@ -630,30 +664,31 @@ static void cpu_mul(void)
     A ^= WMASK;
   if (B & HMASK)
     B ^= WMASK;
-  Z = B;
+  cpu_set_Z(B);
   cpu_set_B(A);
-  A = 0;
+  cpu_set_A(0);
   for (;;) {
     cpu_ndxc();
     if (Z & 1)
-      A += B;
+      cpu_set_A(A + B);
     if (C03 == 12)
       break;
-    Z = ((A << 11) | (Z >> 1)) & WMASK;
-    A >>= 1;
+    cpu_shift_into_Z();
+    cpu_set_A(A >> 1);
   }
   if ((S & HMASK) == 0)
-    A = Z >> 1;
+    cpu_set_A(Z >> 1);
   if (L)
-    A ^= WMASK;
+    cpu_set_A(A ^ WMASK);
 }
 
 static void cpu_ldh(void)
 {
   cpu_mem_read();
-  if ((S & HMASK) == 0)
-    B >>= 6;
-  A = B & RMASK;
+  if (S & HMASK)
+    cpu_set_A(B & RMASK);
+  else
+    cpu_set_A(B >> 6);
 }
 
 static void cpu_sth(void)
@@ -709,8 +744,7 @@ static void cpu_bco(void)
 static void cpu_dsc(void)
 {
   cpu_mem_read();
-  Z = B;
-
+  cpu_set_Z(B);
   cpu_set_S(1);
   cpu_mem_read();
   dpy_dsc(B, A & 07740, Z);
@@ -719,12 +753,12 @@ static void cpu_dsc(void)
   C &= ~BMASK;
   while (C03 < 12) {
     if (C03 == 0 || C03 == 6) {
-      A &= 07740;
+      cpu_set_A(A & 07740);
       cpu_4ndxb();
     }
     if (Z & 1)
       dpy_dis(B >> 11, B & DMASK, A & DMASK);
-    Z >>= 1;
+    cpu_set_Z(Z >> 1);
     cpu_4ndxa();
     cpu_ndxc();
     mus_sample(A, S, Z, 1);
@@ -744,14 +778,14 @@ static void cpu_stc(void)
 {
   cpu_set_S(X(C));
   cpu_set_B(A);
-  A = 0;
+  cpu_set_A(0);
   cpu_mem_write();
 }
 
 static void cpu_jmp(void)
 {
   uint16 tmp = P;
-  P = X(C);
+  cpu_set_P(C);
   if (P != 0) {
     LP = M + 1024 * LMB_SETUP;
     cpu_set_B(INSN_JMP | tmp);
@@ -769,7 +803,7 @@ cpu_insn(void)
   /* Cycle 0, or I. */
   cpu_fetch();
   if (!DO)
-    C = B;
+    cpu_set_C(B);
 
   /* Cycle 1, or X. */
   if ((C & 07000) == 01000)
@@ -910,7 +944,7 @@ t_stat cpu_do(void)
   sim_ttrun();
 
   DO = 1;
-  C = LSW;
+  cpu_set_C(LSW);
   cpu_set_B(RSW);
   cpu_insn();
   DO = 0;
@@ -969,7 +1003,7 @@ static void cpu_interrupt(void)
 
   cpu_set_S(021);
   cpu_mem_read();
-  C = B;
+  cpu_set_C(B);
   if (history) {
     history[history_i].P = 07777;
     history[history_i].C = C;
