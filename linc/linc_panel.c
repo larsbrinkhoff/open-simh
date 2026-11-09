@@ -265,8 +265,10 @@ panel_receive(uint8 item, uint16 value)
 {
   switch (item) {
   case PANEL_ON_OFF:
-    if (value == 0)
-      exit_cmd(0, "0");
+    if (value == 0) {
+      strncpy(panel_cmd, "quit 0", sizeof panel_cmd);
+      stop_reason = STOP_STOP;
+    }
     break;
   case PANEL_CLEAR:
     // light when pressed
@@ -296,7 +298,7 @@ panel_receive(uint8 item, uint16 value)
   case PANEL_AUTO_RESTART:
     // todo
     // light when pressed
-     // repeat exam, step, 
+    // repeat exam, step, 
     break;
   case PANEL_ISTOP:
     // todo
@@ -542,8 +544,8 @@ panel_svc(UNIT *uptr)
 
   data[0] &= 0x7F;
   value = (data[1] << 7) | data[2];
-  panel_receive(data[0], value);
   sim_debug(DBG, &panel_dev, "Received panel item %u, value %u\n", data[0], value);
+  panel_receive(data[0], value);
 
   return SCPE_OK;
 }
@@ -660,6 +662,12 @@ panel_attach(UNIT *uptr, CONST char *cptr)
 static t_stat
 panel_detach(UNIT *uptr)
 {
+  sim_printf("DETACH\n");
+  fflush(stdout);
+  panel_send(PANEL_ON_OFF, 0);
+  panel_flush();
+  sim_os_ms_sleep(10);
+
   panel_length = 0;
   if (panel_proc != NULL)
     sim_subprocess_stop(panel_proc);
