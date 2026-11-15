@@ -39,7 +39,27 @@ struct SUBPROCESS {
   pid_t      pid;  /* The process ID. */
   int        rfd;  /* File descriptor for reading from the subprocess. */
   int        wfd;  /* File descriptor for writing to the subprocess. */
+  t_bool     live; /* Subprocess was live when last checked. */
 };
+
+static t_bool sim_subprocess_is_alive(SIM_SUBPROCESS *ptr)
+{
+  pid_t pid;
+  int status;
+  pid = waitpid(ptr->pid, &status, WNOHANG);
+  if (pid != 0) {
+    if (WIFEXITED(status))
+      sim_printf("subprocess waitpid(%d)=%d, status=%d: exited (%d)\n",
+		 (int)ptr->pid, (int)pid, status, (int)WEXITSTATUS(status));
+    else if (WIFSIGNALED(status))
+      sim_printf("subprocess waitpid(%d)=%d, status=%d: signaled (%d)\n",
+		 (int)ptr->pid, (int)pid, status, (int)WTERMSIG(status));
+    else if (WIFSTOPPED(status))
+      sim_printf("subprocess waitpid(%d)=%d, status=%d: stopped (%d)\n",
+		 (int)ptr->pid, (int)pid, status, (int)WSTOPSIG(status));
+  }
+  return pid == 0 ? TRUE : FALSE;
+}
 
 t_stat sim_subprocess_start(SIM_SUBPROCESS **pptr, CONST char *command)
 {
@@ -85,6 +105,7 @@ t_stat sim_subprocess_start(SIM_SUBPROCESS **pptr, CONST char *command)
 
   ptr->wfd = pipe1[1];
   ptr->rfd = pipe2[0];
+  ptr->live = TRUE;
   close(pipe1[0]);
   close(pipe2[1]);
 
@@ -103,6 +124,12 @@ t_stat sim_subprocess_stop(SIM_SUBPROCESS *pptr)
 
 t_stat sim_subprocess_read(SIM_SUBPROCESS *pptr, void *cptr, size_t *n)
 {
+  if (!pptr->live)
+    return SCPE_IOERR;
+  if (!sim_subprocess_is_alive(pptr)) {
+    pptr->live = FALSE;
+    return sim_messagef(SCPE_NOPROC, "Subprocess %d has stopped.\n", (int)pptr->pid);
+  }
   ssize_t x = read(pptr->rfd, cptr, *n);
   if (x == -1) {
     *n = 0;
@@ -113,7 +140,7 @@ t_stat sim_subprocess_read(SIM_SUBPROCESS *pptr, void *cptr, size_t *n)
 #endif
       return SCPE_OK;
     default:
-      return SCPE_IOERR;
+      return sim_messagef(SCPE_IOERR, "Error reading from subprocess: %s\n", strerror(errno));
     }
   }
   *n = x;
@@ -124,10 +151,17 @@ t_stat sim_subprocess_write(SIM_SUBPROCESS *pptr, CONST void *cptr, size_t n)
 {
   ssize_t x;
 
+  if (!pptr->live)
+    return SCPE_IOERR;
+  if (!sim_subprocess_is_alive(pptr)) {
+    pptr->live = FALSE;
+    return sim_messagef(SCPE_NOPROC, "Subprocess %d has stopped.\n", (int)pptr->pid);
+  }
+
   while (n > 0) {
     x = write(pptr->wfd, cptr, n);
     if (x <= 0)
-      return SCPE_IOERR;
+      return sim_messagef(SCPE_IOERR, "Error writing to subprocess: %s\n", strerror(errno));
     n -= x;
   }
 

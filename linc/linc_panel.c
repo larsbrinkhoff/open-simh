@@ -227,9 +227,9 @@ panel_flush(void)
   if (panel_length == 0)
     return;
   stat = sim_subprocess_write(panel_proc, panel_buffer, panel_length);
+  if (stat == SCPE_OK)
+    sim_debug(DBG, &panel_dev, "Flushed %d bytes\n", (int)panel_length);
   panel_length = 0;
-  if (stat != SCPE_OK)
-    sim_messagef(stat, "Error writing to subprocess.");
 }
 
 void
@@ -520,10 +520,8 @@ panel_svc(UNIT *uptr)
   do {
     n = 1;
     stat = sim_subprocess_read(panel_proc, data, &n);
-    if (stat != SCPE_OK) {
-      sim_messagef(stat, "Error reading from PANEL subprocess");
+    if (stat != SCPE_OK)
       return SCPE_OK;
-    }
     if (n == 0)
       return SCPE_OK;
   } while ((data[0] & 0x80) == 0);
@@ -531,14 +529,12 @@ panel_svc(UNIT *uptr)
   for (p = data + 1, m = 2; m > 0; p += n, m -= n) {
     n = m;
     stat = sim_subprocess_read(panel_proc, p, &n);
-    if (stat != SCPE_OK) {
-      sim_messagef(stat, "Error reading from PANEL subprocess");
+    if (stat != SCPE_OK)
       return SCPE_OK;
-    }
   }
 
   if ((data[1] & 0x80) != 0 || (data[2] & 0x80) != 0) {
-    sim_messagef(stat, "Error reading from PANEL subprocess");
+    sim_messagef(stat, "Unexpected data from PANEL subprocess: 0x%02x 0x%02x 0x%02x\n", (int)data[0], (int)data[1], (int)data[2]);
     return SCPE_OK;
   }
 
