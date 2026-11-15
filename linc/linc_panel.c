@@ -193,26 +193,43 @@ static t_stat panel_detach(UNIT *uptr);
 
 /* Debug */
 #define DBG             0001
+#define DBG_FLUSH       0002
+#define DBG_STROBE      0004
+
+#define UNIT_V_FLOW     (UNIT_V_UF + 0)
+#define UNIT_FLOW       (1 << UNIT_V_FLOW)
+#define UNIT_V_STROBE   (UNIT_V_UF + 1)
+#define UNIT_STROBE     (1 << UNIT_V_STROBE)
+#define UNIT_OUTPUT     (UNIT_FLOW | UNIT_STROBE)
 
 #define BUFFER_SIZE 250
 
 static uint16 panel_state[128];
+static t_bool panel_state_strobe[128];
 static SIM_SUBPROCESS *panel_proc = NULL;
 static uint8 panel_buffer[BUFFER_SIZE + 3];
 static uint8 panel_length = 0;
 static char panel_cmd[100];
 
 static UNIT panel_unit = {
-  UDATA(&panel_svc, UNIT_IDLE, 0)
+  UDATA(&panel_svc, UNIT_IDLE|UNIT_STROBE, 0)
+};
+
+static MTAB panel_mod[] = {
+  { UNIT_OUTPUT, UNIT_FLOW,   "FLOW",   "FLOW",   NULL, NULL, "Immediate output" },
+  { UNIT_OUTPUT, UNIT_STROBE, "STROBE", "STROBE", NULL, NULL, "Strobed output" },
+  { 0 }
 };
 
 static DEBTAB panel_deb[] = {
-  { "DBG",  DBG },
+  { "DBG",    DBG },
+  { "FLUSH",  DBG_FLUSH },
+  { "STROBE", DBG_STROBE },
   { NULL, 0 }
 };
 
 DEVICE panel_dev = {
-  "PANEL", &panel_unit, NULL, NULL,
+  "PANEL", &panel_unit, NULL, panel_mod,
   1, 8, 12, 1, 8, 12,
   NULL, NULL, &panel_reset,
   NULL, &panel_attach, &panel_detach,
@@ -228,16 +245,26 @@ panel_flush(void)
     return;
   stat = sim_subprocess_write(panel_proc, panel_buffer, panel_length);
   if (stat == SCPE_OK)
-    sim_debug(DBG, &panel_dev, "Flushed %d bytes\n", (int)panel_length);
+    sim_debug(DBG_FLUSH, &panel_dev, "Flushed %d bytes\n", (int)panel_length);
   panel_length = 0;
+}
+
+static void
+panel_send_buffered(uint8 item, uint16 value)
+{
+  t_stat stat;
+  uint8 data[3];
+
+  panel_buffer[panel_length++] = 0x80 | item;
+  panel_buffer[panel_length++] = (value >> 7) & 0x7F;
+  panel_buffer[panel_length++] = value & 0x7F;
+  if (panel_length >= BUFFER_SIZE)
+    panel_flush();
 }
 
 void
 panel_send(uint8 item, uint16 value)
 {
-  t_stat stat;
-  uint8 data[3];
-
   if (panel_proc == NULL)
     return;
 
@@ -245,12 +272,28 @@ panel_send(uint8 item, uint16 value)
   if (panel_state[item] == value)
     return;
   panel_state[item] = value;
+  panel_state_strobe[item] = TRUE;
 
-  panel_buffer[panel_length++] = 0x80 | item;
-  panel_buffer[panel_length++] = (value >> 7) & 0x7F;
-  panel_buffer[panel_length++] = value & 0x7F;
-  if (panel_length >= BUFFER_SIZE)
+  if (panel_unit.flags & UNIT_FLOW)
+    panel_send_buffered(item, value);
+}
+
+static void
+panel_strobe(void)
+{
+  unsigned u;
+  int counter = 0;
+  for (u = 1; u < PANEL_ITEMS; u++) // 0 (PANEL_HELLO) sent seprately
+    if (panel_state_strobe[u]) {
+      panel_send_buffered(u, panel_state[u]);
+      panel_state_strobe[u] = FALSE;
+      counter++;
+    }
+  if (counter > 0) {
+    panel_send_buffered(PANEL_HELLO, 1);
+    sim_debug(DBG_STROBE, &panel_dev, "Strobed %d items\n", counter);
     panel_flush();
+  }
 }
 
 static void
@@ -515,7 +558,9 @@ panel_svc(UNIT *uptr)
   if (panel_proc == NULL)
     return SCPE_OK;
 
-  sim_activate_after(uptr, 10000);
+  sim_activate_after(uptr, 20000);
+  if (panel_unit.flags & UNIT_STROBE)
+    panel_strobe();
 
   do {
     n = 1;
@@ -652,6 +697,7 @@ panel_attach(UNIT *uptr, CONST char *cptr)
 
   strlcpy(uptr->filename, cptr, CBUFSIZE);
   uptr->flags |= UNIT_ATT;
+  panel_send(PANEL_HELLO, 0x1962);
   return SCPE_OK;
 }
 
@@ -661,6 +707,7 @@ panel_detach(UNIT *uptr)
   sim_printf("DETACH\n");
   fflush(stdout);
   panel_send(PANEL_ON_OFF, 0);
+  panel_send(PANEL_HELLO, 0);
   panel_flush();
   sim_os_ms_sleep(10);
 

@@ -27,6 +27,7 @@
 #ifndef LINC_PANEL_H_
 #define LINC_PANEL_H_  0
 
+#define PANEL_HELLO                  0
 #define PANEL_ON_OFF                 1  //    1 <--> 
 #define PANEL_RUN_PAUSE              2  //    2 ---> 
 #define   PANEL_STOPPED              0
